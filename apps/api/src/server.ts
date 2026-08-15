@@ -1,0 +1,11 @@
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import Redis from "ioredis";
+import { db } from "@ane/database";
+const app=Fastify({logger:true});
+const redis=new Redis(process.env.REDIS_URL??"redis://localhost:6379");
+await app.register(cors,{origin:process.env.CORS_ORIGIN??"http://localhost:3000"});
+app.get("/health",async()=>{let database="ok",redisStatus="ok";try{await db.$queryRaw`SELECT 1`}catch{database="error"}try{await redis.ping()}catch{redisStatus="error"}return{service:"ai-novel-engine-api",status:database==="ok"&&redisStatus==="ok"?"ok":"degraded",database,redis:redisStatus,timestamp:new Date().toISOString()}});
+app.get("/api",async()=>({name:"AI Novel Engine API",version:"0.1.0"}));
+app.addHook("onClose",async()=>{await redis.quit();await db.$disconnect()});
+await app.listen({host:"0.0.0.0",port:Number(process.env.API_PORT??3001)});

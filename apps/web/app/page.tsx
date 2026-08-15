@@ -1,0 +1,1 @@
+export default function Home(){return <main style={{maxWidth:1100,margin:"0 auto",padding:48}}><h1>AI Novel Engine</h1><p>Phase 0 foundation is running.</p><ul><li>Next.js Web</li><li>Fastify API</li><li>PostgreSQL + pgvector</li><li>Redis</li></ul></main>}
