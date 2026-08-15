@@ -3,6 +3,10 @@ import { LLMMessage, LLMGenerationConfig, ILLMProvider, LLMError, LLMErrorCode }
 
 export abstract class BaseProvider implements ILLMProvider {
   protected abstract providerName: string;
+  
+  getProviderName(): string {
+    return this.providerName;
+  }
 
   protected async withRetry<T>(operation: () => Promise<T>): Promise<T> {
     const maxRetries = 3;

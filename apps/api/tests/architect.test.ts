@@ -18,7 +18,8 @@ describe('ArchitectManager & StageRegistry (DB-Free)', () => {
   });
 
   it('MockProvider returns realistic structured output', async () => {
-    const result = await provider.generateStructured('STAGE: CONCEPT', STAGE_REGISTRY.CONCEPT.outputSchema);
+    const messages = [{ role: "user" as const, content: "STAGE: CONCEPT" }];
+    const result = await provider.generateStructured(messages, STAGE_REGISTRY.CONCEPT.outputSchema);
     expect(result).toHaveProperty('title');
     expect(result).toHaveProperty('hook');
     expect(result.genreCandidates.length).toBeGreaterThan(0);

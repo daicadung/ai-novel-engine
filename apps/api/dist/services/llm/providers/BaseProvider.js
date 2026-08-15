@@ -1,5 +1,8 @@
 import { LLMError, LLMErrorCode } from '@ane/core';
 export class BaseProvider {
+    getProviderName() {
+        return this.providerName;
+    }
     async withRetry(operation) {
         const maxRetries = 3;
         let attempt = 0;

@@ -8,6 +8,7 @@ export type LLMGenerationConfig = {
     maxTokens?: number;
     model?: string;
     responseFormat?: "json_object" | "text";
+    onUsage?: (usage: import('../generation/types.js').TokenUsage) => void;
 };
 export declare enum LLMErrorCode {
     RATE_LIMITED = "RATE_LIMITED",
@@ -35,6 +36,7 @@ export declare class LLMError extends Error {
     });
 }
 export interface ILLMProvider {
+    getProviderName(): string;
     generateText(messages: LLMMessage[], config?: LLMGenerationConfig): Promise<string>;
     generateStructured<T>(messages: LLMMessage[], schema: z.ZodType<T>, config?: LLMGenerationConfig): Promise<T>;
 }

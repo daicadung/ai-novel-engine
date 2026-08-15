@@ -9,7 +9,8 @@ export class StageHandler {
     }
     async invoke(contextPrompt, config) {
         const messages = [{ role: "user", content: contextPrompt }];
-        return await this.provider.generateStructured(messages, this.definition.outputSchema, config);
+        const data = await this.provider.generateStructured(messages, this.definition.outputSchema, config);
+        return data;
     }
 }
 export class ConceptStageHandler extends StageHandler {

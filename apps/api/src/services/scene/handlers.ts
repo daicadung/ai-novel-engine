@@ -4,7 +4,7 @@ import { LLMProvider } from '../architect/llm.js';
 import { SceneContextBuilder } from './context.js';
 
 export class SceneStageHandler {
-  protected provider: LLMProvider;
+  public provider: LLMProvider;
   
   constructor(provider: LLMProvider) {
     this.provider = provider;

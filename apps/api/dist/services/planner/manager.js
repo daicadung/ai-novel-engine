@@ -2,6 +2,7 @@ import { db } from '@ane/database';
 import * as Handlers from './handlers.js';
 import { ProviderFactory } from '../llm/factory.js';
 import { PlannerStage } from '@ane/core';
+import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 export class StoryPlannerManager {
     provider;
     handlers;
@@ -48,6 +49,8 @@ export class StoryPlannerManager {
                 startedAt: new Date()
             }
         });
+        const originalProvider = handler.provider;
+        handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, stage, undefined, job.id);
         try {
             const prompt = await handler.prepareInput(novelId, parentId);
             const fullPrompt = `${prompt}\nPLANNER_STAGE: ${stage}`;
@@ -60,6 +63,7 @@ export class StoryPlannerManager {
                 where: { id: job.id },
                 data: { status: 'SUCCEEDED', output: output, completedAt: new Date() }
             });
+            return;
         }
         catch (e) {
             await db.generationJob.update({
@@ -67,6 +71,9 @@ export class StoryPlannerManager {
                 data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
             });
             throw e;
+        }
+        finally {
+            handler.provider = originalProvider;
         }
     }
 }

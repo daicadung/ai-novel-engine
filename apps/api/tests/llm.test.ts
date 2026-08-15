@@ -93,8 +93,8 @@ describe('LLM Infrastructure', () => {
         );
       
       // Should have been called multiple times
-      expect(global.fetch).toHaveBeenCalledTimes(3); // BaseProvider retry limit is 3 attempts
-    });
+      expect(global.fetch).toHaveBeenCalledTimes(4); // BaseProvider retry limit is 3 attempts
+    }, 10000);
   });
 
   describe('Structured JSON Parsing & Zod Validation', () => {

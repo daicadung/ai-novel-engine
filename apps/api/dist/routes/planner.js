@@ -1,8 +1,8 @@
-import { PlannerStage } from '@ane/core';
-import { StoryPlannerManager } from '../services/planner/manager.js';
+import { PlannerStage, JobType } from '@ane/core';
 import { db } from '@ane/database';
+import { QueueFactory } from '../services/queue/index.js';
 export default async function plannerRoutes(fastify) {
-    const manager = new StoryPlannerManager();
+    const queueManager = QueueFactory.getQueueManager();
     fastify.get('/:novelId/planner/status', async (request, reply) => {
         const { novelId } = request.params;
         const plan = await db.storyPlan.findUnique({ where: { novelId } });
@@ -24,32 +24,32 @@ export default async function plannerRoutes(fastify) {
     });
     fastify.post('/:novelId/planner/destination', async (request, reply) => {
         const { novelId } = request.params;
-        manager.runStage(novelId, PlannerStage.DESTINATION).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        await queueManager.addJob(JobType.PLANNER_STAGE, { novelId, stage: PlannerStage.DESTINATION });
+        return reply.status(202).send({ message: 'Generation queued' });
     });
     fastify.post('/:novelId/planner/macro', async (request, reply) => {
         const { novelId } = request.params;
-        manager.runStage(novelId, PlannerStage.MACRO).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        await queueManager.addJob(JobType.PLANNER_STAGE, { novelId, stage: PlannerStage.MACRO });
+        return reply.status(202).send({ message: 'Generation queued' });
     });
     fastify.post('/:novelId/planner/sagas', async (request, reply) => {
         const { novelId } = request.params;
-        manager.runStage(novelId, PlannerStage.SAGA).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        await queueManager.addJob(JobType.PLANNER_STAGE, { novelId, stage: PlannerStage.SAGA });
+        return reply.status(202).send({ message: 'Generation queued' });
     });
     fastify.post('/:novelId/planner/sagas/:sagaId/arcs', async (request, reply) => {
         const { novelId, sagaId } = request.params;
-        manager.runStage(novelId, PlannerStage.ARC, sagaId).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        await queueManager.addJob(JobType.PLANNER_STAGE, { novelId, stage: PlannerStage.ARC, parentId: sagaId });
+        return reply.status(202).send({ message: 'Generation queued' });
     });
     fastify.post('/:novelId/planner/arcs/:arcId/mini-arcs', async (request, reply) => {
         const { novelId, arcId } = request.params;
-        manager.runStage(novelId, PlannerStage.MINI_ARC, arcId).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        await queueManager.addJob(JobType.PLANNER_STAGE, { novelId, stage: PlannerStage.MINI_ARC, parentId: arcId });
+        return reply.status(202).send({ message: 'Generation queued' });
     });
     fastify.post('/:novelId/planner/mini-arcs/:miniArcId/chapters', async (request, reply) => {
         const { novelId, miniArcId } = request.params;
-        manager.runStage(novelId, PlannerStage.CHAPTER_BATCH, miniArcId).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        await queueManager.addJob(JobType.PLANNER_STAGE, { novelId, stage: PlannerStage.CHAPTER_BATCH, parentId: miniArcId });
+        return reply.status(202).send({ message: 'Generation queued' });
     });
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TokenUsage } from '../generation/types.js';
 
 export type LLMMessage = {
   role: "system" | "user" | "assistant";
@@ -10,6 +11,7 @@ export type LLMGenerationConfig = {
   maxTokens?: number;
   model?: string;
   responseFormat?: "json_object" | "text";
+  onUsage?: (usage: import('../generation/types.js').TokenUsage) => void;
 };
 
 export enum LLMErrorCode {
@@ -48,7 +50,10 @@ export class LLMError extends Error {
   }
 }
 
+
+
 export interface ILLMProvider {
+  getProviderName(): string;
   generateText(messages: LLMMessage[], config?: LLMGenerationConfig): Promise<string>;
   generateStructured<T>(messages: LLMMessage[], schema: z.ZodType<T>, config?: LLMGenerationConfig): Promise<T>;
 }

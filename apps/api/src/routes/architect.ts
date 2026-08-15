@@ -1,12 +1,12 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { ArchitectStage } from '@ane/core';
+import { ArchitectStage, JobType } from '@ane/core';
 import { db } from '@ane/database';
-import { ArchitectManager } from '../services/architect/manager.js';
+import { QueueFactory } from '../services/queue/index.js';
 import { NotFoundError } from '../errors/index.js';
 
 export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
-  const manager = new ArchitectManager();
+  const queueManager = QueueFactory.getQueueManager();
 
   app.post('/novels/:novelId/architect/start', {
     schema: {
@@ -17,9 +17,10 @@ export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
     const novel = await db.novel.findUnique({ where: { id: novelId } });
     if (!novel) throw new NotFoundError('Novel not found');
 
-    // Run the first stage in background without waiting
-    manager.runStage(novelId, ArchitectStage.CONCEPT).catch(e => {
-      app.log.error(`Architect run failed for novel ${novelId}: ${e.message}`);
+    // Run the first stage via queue
+    await queueManager.addJob(JobType.ARCHITECT_STAGE, {
+      novelId,
+      stage: ArchitectStage.CONCEPT
     });
 
     return { success: true, message: "Architect started", stage: ArchitectStage.CONCEPT };
@@ -50,12 +51,10 @@ export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
   }, async (req, reply) => {
     const { novelId, stage } = req.params;
     
-    // Background run
-    manager.runStage(novelId, stage).catch(e => {
-      app.log.error(`Architect stage run failed: ${e.message}`);
-    });
+    // Background run via queue
+    await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage });
 
-    return { success: true, stage, status: "RUNNING" };
+    return { success: true, stage, status: "QUEUED" };
   });
 
   app.post('/novels/:novelId/architect/stages/:stage/retry', {
@@ -68,12 +67,10 @@ export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
   }, async (req, reply) => {
     const { novelId, stage } = req.params;
     
-    // Background run with retry flag
-    manager.runStage(novelId, stage, true).catch(e => {
-      app.log.error(`Architect stage retry failed: ${e.message}`);
-    });
+    // Background run via queue
+    await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage, isRetry: true });
 
-    return { success: true, stage, status: "RUNNING (RETRY)" };
+    return { success: true, stage, status: "QUEUED" };
   });
 
   app.get('/novels/:novelId/architect/jobs', {

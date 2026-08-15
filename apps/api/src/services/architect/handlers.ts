@@ -4,7 +4,7 @@ import { LLMProvider } from './llm.js';
 import { db } from '@ane/database';
 
 export abstract class StageHandler<T extends z.ZodTypeAny> {
-  protected provider: LLMProvider;
+  public provider: LLMProvider;
   public definition: StageDefinition;
   
   constructor(provider: LLMProvider, definition: StageDefinition) {
@@ -16,7 +16,8 @@ export abstract class StageHandler<T extends z.ZodTypeAny> {
   
   async invoke(contextPrompt: string, config?: any): Promise<z.infer<T>> {
     const messages = [{ role: "user" as const, content: contextPrompt }];
-    return await this.provider.generateStructured(messages, this.definition.outputSchema, config);
+    const data = await this.provider.generateStructured(messages, this.definition.outputSchema, config);
+    return data as z.infer<T>;
   }
 
   abstract applyCanonicalPersistence(novelId: string, data: z.infer<T>, tx: any): Promise<void>;

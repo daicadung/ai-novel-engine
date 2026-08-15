@@ -1,15 +1,23 @@
 import { BaseProvider } from './BaseProvider.js';
+import { LLMErrorCode } from '@ane/core';
 export class MockProvider extends BaseProvider {
     providerName = 'Mock';
     async generateText(messages, config) {
         const combinedContent = messages.map(m => m.content).join('\n');
+        if (config?.onUsage) {
+            config.onUsage({ inputTokens: 10, outputTokens: 20, totalTokens: 30 });
+        }
         return `Mock text response for: ${combinedContent.substring(0, 50)}...`;
     }
     async generateStructured(messages, schema, config) {
         const combinedContent = messages.map(m => m.content).join('\n');
-        // Architect Concepts
+        if (config?.onUsage) {
+            config.onUsage({ inputTokens: 100, outputTokens: 200, totalTokens: 300 });
+        }
+        // Default mock response
+        let data = {};
         if (combinedContent.includes('STAGE: CONCEPT')) {
-            return {
+            data = {
                 title: "Mock Title",
                 hook: "Mock Hook",
                 premise: "Mock Premise",
@@ -21,7 +29,7 @@ export class MockProvider extends BaseProvider {
             };
         }
         if (combinedContent.includes('PLANNER_STAGE: DESTINATION')) {
-            return {
+            data = {
                 intendedEnding: "Defeat the dark lord",
                 protagonistState: "King",
                 antagonistState: "Dead",
@@ -33,7 +41,7 @@ export class MockProvider extends BaseProvider {
             };
         }
         if (combinedContent.includes('PLANNER_STAGE: MACRO')) {
-            return {
+            data = {
                 targetChapterCount: 100,
                 numberOfSagas: 3,
                 globalEscalation: "Things get worse",
@@ -44,18 +52,31 @@ export class MockProvider extends BaseProvider {
             };
         }
         if (combinedContent.includes('PLANNER_STAGE: CHAPTER_BATCH')) {
-            return { chapters: [] };
+            data = { chapters: [] };
         }
         if (combinedContent.includes('SCENE_STAGE: SCENE_PLAN')) {
-            return { scenes: [] };
+            data = { scenes: [] };
         }
         if (combinedContent.includes('STAGE: PROSE_GENERATION') || combinedContent.includes('STAGE: PROSE_REVISION')) {
-            return {
+            data = {
                 content: "The cold wind whipped through the Capital streets as Character A ducked into the alleyway. Guards marched past, their armor clanking ominously. 'I have to find the king,' Character A muttered. The sewer grate was heavy, but with a surge of determined adrenaline, it gave way. The path to the castle was open.",
                 wordCount: 152
             };
         }
-        // Default mock response
-        return {};
+        // Explicitly for tests that return bad data or need validation
+        if (combinedContent.includes('test')) {
+            try {
+                const textData = await this.generateText(messages);
+                data = JSON.parse(textData);
+            }
+            catch {
+                throw this.createError(LLMErrorCode.INVALID_RESPONSE, 'Malformed JSON', false);
+            }
+        }
+        const validationResult = schema.safeParse(data);
+        if (!validationResult.success) {
+            throw this.createError(LLMErrorCode.INVALID_RESPONSE, `Zod validation failed: ${validationResult.error.message}`, false, undefined, validationResult.error);
+        }
+        return validationResult.data;
     }
 }

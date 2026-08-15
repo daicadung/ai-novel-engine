@@ -4,7 +4,7 @@ import { LLMProvider } from '../architect/llm.js';
 import { ProseValidator } from './validator.js';
 
 export class ProseStageHandler {
-  protected provider: LLMProvider;
+  public provider: LLMProvider;
   
   constructor(provider: LLMProvider) {
     this.provider = provider;

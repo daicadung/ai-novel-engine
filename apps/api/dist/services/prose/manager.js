@@ -3,6 +3,7 @@ import { ProseStageHandler } from './handlers.js';
 import { ProseContextBuilder } from './context.js';
 import { ProviderFactory } from '../llm/factory.js';
 import { ProseStatus } from '@prisma/client';
+import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 export class ProseManager {
     provider;
     handler;
@@ -29,6 +30,8 @@ export class ProseManager {
                 startedAt: new Date()
             }
         });
+        const originalProvider = this.handler.provider;
+        this.handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, 'PROSE_GENERATION', chapterId, job.id);
         try {
             const generatedScenes = [];
             for (const scene of scenePlanVersion.scenes) {
@@ -102,6 +105,9 @@ export class ProseManager {
                 data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
             });
             throw e;
+        }
+        finally {
+            this.handler.provider = originalProvider;
         }
     }
 }

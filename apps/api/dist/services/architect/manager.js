@@ -1,7 +1,8 @@
 import { db } from '@ane/database';
 import * as Handlers from './handlers.js';
 import { ProviderFactory } from '../llm/factory.js';
-import { ArchitectStage, STAGE_REGISTRY } from '@ane/core';
+import { ArchitectStage, ArchitectStatus, STAGE_REGISTRY } from '@ane/core';
+import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 export class ArchitectManager {
     provider;
     handlers;
@@ -36,14 +37,14 @@ export class ArchitectManager {
                 downstream.push(current);
             }
             for (const [stage, def] of Object.entries(STAGE_REGISTRY)) {
-                if (def.dependsOn.includes(current) && !visited.has(stage)) {
+                if (def.dependencies.includes(current) && !visited.has(stage)) {
                     queue.push(stage);
                 }
             }
         }
         return downstream;
     }
-    async runStage(novelId, stage, config) {
+    async runStage(novelId, stage, isRetry = false) {
         const novel = await db.novel.findUnique({ where: { id: novelId } });
         if (!novel)
             throw new Error("Novel not found");
@@ -59,18 +60,19 @@ export class ArchitectManager {
                 startedAt: new Date()
             }
         });
+        const originalProvider = handler.provider;
+        handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, stage, undefined, job.id);
         try {
             const prompt = await handler.prepareInput(novelId);
             const fullPrompt = `${prompt}\nSTAGE: ${stage}`;
-            const data = await handler.invoke(fullPrompt, config);
+            const data = await handler.invoke(fullPrompt);
             await db.$transaction(async (tx) => {
                 await handler.applyCanonicalPersistence(novelId, data, tx);
                 const downstream = this.getDownstreamStages(stage);
-                for (const ds of downstream) {
-                    const field = STAGE_REGISTRY[ds].stateField;
+                if (downstream.length > 0) {
                     await tx.novel.update({
                         where: { id: novelId },
-                        data: { [field]: 'STALE' }
+                        data: { architectStatus: ArchitectStatus.STALE }
                     });
                 }
             });
@@ -86,6 +88,9 @@ export class ArchitectManager {
                 data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
             });
             throw e;
+        }
+        finally {
+            handler.provider = originalProvider;
         }
     }
 }

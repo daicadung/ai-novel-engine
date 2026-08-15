@@ -3,10 +3,11 @@ import { LLMProvider } from '../architect/llm.js';
 import * as Handlers from './handlers.js';
 import { ProviderFactory } from '../llm/factory.js';
 import { PlannerStage, PLANNER_STAGE_REGISTRY } from '@ane/core';
+import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 
 export class StoryPlannerManager {
   private provider: LLMProvider;
-  private handlers: Map<PlannerStage, Handlers.StageHandler>;
+  private handlers: Map<PlannerStage, Handlers.PlannerStageHandler<any>>;
 
   constructor(provider?: LLMProvider) {
     this.provider = provider || ProviderFactory.getProvider('PLANNER');
@@ -56,6 +57,9 @@ export class StoryPlannerManager {
       }
     });
 
+    const originalProvider = handler.provider;
+    handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, stage, undefined, job.id) as any;
+
     try {
       const prompt = await handler.prepareInput(novelId, parentId);
       const fullPrompt = `${prompt}\nPLANNER_STAGE: ${stage}`;
@@ -70,12 +74,15 @@ export class StoryPlannerManager {
         where: { id: job.id },
         data: { status: 'SUCCEEDED', output: output as any, completedAt: new Date() }
       });
+      return;
     } catch (e: any) {
       await db.generationJob.update({
         where: { id: job.id },
         data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
       });
       throw e;
+    } finally {
+      handler.provider = originalProvider;
     }
   }
 }

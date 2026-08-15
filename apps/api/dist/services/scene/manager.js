@@ -2,6 +2,7 @@ import { db } from '@ane/database';
 import { ProviderFactory } from '../llm/factory.js';
 import { SceneStageHandler } from './handlers.js';
 import { ContinuityValidator } from './validator.js';
+import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 export class SceneManager {
     provider;
     handler;
@@ -27,6 +28,8 @@ export class SceneManager {
                 startedAt: new Date()
             }
         });
+        const originalProvider = this.handler.provider;
+        this.handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, 'SCENE_PLAN', chapterId, job.id);
         try {
             // 1. Generate Candidate
             const prompt = await this.handler.prepareInput(novelId, chapterId, previousSnapshotId);
@@ -104,6 +107,9 @@ export class SceneManager {
                 data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
             });
             throw e;
+        }
+        finally {
+            this.handler.provider = originalProvider;
         }
     }
 }

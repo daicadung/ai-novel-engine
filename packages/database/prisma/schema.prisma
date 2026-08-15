@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   extensions = [vector]
 }
 
@@ -32,9 +33,12 @@ enum ChapterStatus {
 
 enum GenerationJobStatus {
   QUEUED
+  CLAIMED
   RUNNING
   SUCCEEDED
   FAILED
+  RETRY_PENDING
+  BLOCKED
   CANCELLED
 }
 
@@ -301,14 +305,28 @@ model GenerationJob {
   error  Json?
 
   retryCount Int @default(0)
+  maxRetries Int @default(3)
+
+  lockedAt      DateTime?
+  lockedBy      String?
+  parentJobId   String?
+  correlationId String?
+  scheduledAt   DateTime?
+
+  inputTokens      Int?
+  outputTokens     Int?
+  totalTokens      Int?
+  estimatedCostUsd Float?
 
   startedAt   DateTime?
   completedAt DateTime?
+  failedAt    DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([novelId])
-  @@index([status])
+  @@index([status, scheduledAt])
+  @@index([lockedAt])
 }
 
 model Memory {

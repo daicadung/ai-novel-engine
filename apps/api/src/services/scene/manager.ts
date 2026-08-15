@@ -3,6 +3,7 @@ import { LLMProvider } from '../architect/llm.js';
 import { ProviderFactory } from '../llm/factory.js';
 import { SceneStageHandler } from './handlers.js';
 import { ContinuityValidator } from './validator.js';
+import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 
 export class SceneManager {
   private provider: LLMProvider;
@@ -31,6 +32,9 @@ export class SceneManager {
         startedAt: new Date()
       }
     });
+
+    const originalProvider = this.handler.provider;
+    this.handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, 'SCENE_PLAN', chapterId, job.id) as any;
 
     try {
       // 1. Generate Candidate
@@ -115,6 +119,8 @@ export class SceneManager {
         data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
       });
       throw e;
+    } finally {
+      this.handler.provider = originalProvider;
     }
   }
 }
