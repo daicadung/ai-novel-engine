@@ -1,14 +1,649 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
-enum NovelStatus { DRAFT PLANNING GENERATING PAUSED COMPLETED ARCHIVED }
-enum ChapterStatus { PLANNED GENERATING GENERATED VALIDATING REVISION_REQUIRED REVIEW APPROVED FINALIZING CANONICAL }
-enum GenerationJobStatus { QUEUED RUNNING SUCCEEDED FAILED CANCELLED }
-model Novel { id String @id @default(cuid()) title String premise String? language String @default("vi") genre String? tone String? status NovelStatus @default(DRAFT) targetChapters Int? chapterWordGoal Int? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt storyBibles StoryBible[] characters Character[] arcs Arc[] chapters Chapter[] plotThreads PlotThread[] foreshadowing Foreshadowing[] generationJobs GenerationJob[] memories Memory[] }
-model StoryBible { id String @id @default(cuid()) novelId String version Int logline String? synopsis String? themes Json? worldRules Json? powerSystem Json? narrativeRules Json? styleRules Json? endingDirection Json? isCanonical Boolean @default(false) createdAt DateTime @default(now()) novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) @@unique([novelId,version]) }
-model Character { id String @id @default(cuid()) novelId String name String aliases Json? role String? description String? personality Json? goals Json? fears Json? motivation String? background String? currentState Json? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) @@index([novelId]) }
-model Arc { id String @id @default(cuid()) novelId String number Int title String summary String? objective String? conflict String? chapterStart Int? chapterEnd Int? status String @default("PLANNED") createdAt DateTime @default(now()) updatedAt DateTime @updatedAt novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) chapters Chapter[] @@unique([novelId,number]) }
-model Chapter { id String @id @default(cuid()) novelId String arcId String? number Int title String? plan Json? content String? summary String? status ChapterStatus @default(PLANNED) wordCount Int? version Int @default(1) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) arc Arc? @relation(fields:[arcId],references:[id],onDelete:SetNull) @@unique([novelId,number,version]) }
-model PlotThread { id String @id @default(cuid()) novelId String title String description String introducedChapter Int? targetPayoffChapter Int? status String @default("SETUP") importance Int @default(0) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) }
-model Foreshadowing { id String @id @default(cuid()) novelId String description String introducedChapter Int? plannedPayoffChapter Int? payoffDescription String? status String @default("PLANNED") createdAt DateTime @default(now()) updatedAt DateTime @updatedAt novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) }
-model GenerationJob { id String @id @default(cuid()) novelId String type String inputSnapshot Json? provider String? model String? status GenerationJobStatus @default(QUEUED) attempt Int @default(0) output Json? error String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) }
-model Memory { id String @id @default(cuid()) novelId String chapterId String? category String title String content String importance Int @default(0) metadata Json? createdAt DateTime @default(now()) novel Novel @relation(fields:[novelId],references:[id],onDelete:Cascade) }
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum NovelStatus {
+  DRAFT
+  PLANNING
+  GENERATING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum ChapterStatus {
+  PLANNED
+  GENERATING
+  GENERATED
+  VALIDATING
+  REVISION_REQUIRED
+  REVIEW
+  APPROVED
+  FINALIZING
+  CANONICAL
+}
+
+enum GenerationJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum ArchitectStage {
+  CONCEPT
+  PREMISE
+  GENRE_AND_TONE
+  THEMES
+  WORLD
+  POWER_SYSTEM
+  CHARACTERS
+  FACTIONS
+  CONFLICTS
+  PLOT_THREADS
+  CHARACTER_ARCS
+  FORESHADOWING
+  LONG_TERM_STRUCTURE
+  STORY_BIBLE_FINALIZATION
+}
+
+enum ArchitectStatus {
+  NOT_STARTED
+  RUNNING
+  COMPLETED
+  FAILED
+  STALE
+}
+
+model Novel {
+  id              String      @id @default(cuid())
+  title           String
+  premise         String?
+  language        String      @default("vi")
+  genre           String?
+  tone            String?
+  status          NovelStatus @default(DRAFT)
+  targetChapters  Int?
+  chapterWordGoal Int?
+
+  architectStage  ArchitectStage?
+  architectStatus ArchitectStatus? @default(NOT_STARTED)
+
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  storyBibles    StoryBible[]
+  characters     Character[]
+  arcs           Arc[]
+  chapters       Chapter[]
+  plotThreads    PlotThread[]
+  foreshadowing  Foreshadowing[]
+  generationJobs GenerationJob[]
+  memories       Memory[]
+  locations      Location[]
+  items          Item[]
+  factions       Faction[]
+  relationships  Relationship[]
+  events         Event[]
+  storyPlan      StoryPlan?
+  consequences   Consequence[]
+  snapshots      ContinuitySnapshot[]
+}
+
+model StoryBible {
+  id              String   @id @default(cuid())
+  novelId         String
+  version         Int
+  logline         String?
+  synopsis        String?
+  themes          Json?
+  worldRules      Json?
+  powerSystem     Json?
+  narrativeRules  Json?
+  styleRules      Json?
+  endingDirection Json?
+  isCanonical     Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  novel           Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@unique([novelId, version])
+}
+
+model Character {
+  id            String         @id @default(cuid())
+  novelId       String
+  name          String
+  aliases       Json?
+  role          String?
+  description   String?
+  personality   Json?
+  goals         Json?
+  fears         Json?
+  motivation    String?
+  background    String?
+  currentState  Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  novel         Novel          @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  characterArcs CharacterArc[]
+
+  @@index([novelId])
+}
+
+model Location {
+  id          String   @id @default(cuid())
+  novelId     String
+  name        String
+  description String?
+  region      String?
+  traits      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  novel       Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId])
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  novelId     String
+  name        String
+  description String?
+  properties  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  novel       Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId])
+}
+
+model Faction {
+  id          String   @id @default(cuid())
+  novelId     String
+  name        String
+  description String?
+  goals       String?
+  traits      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  novel       Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId])
+}
+
+model Relationship {
+  id          String   @id @default(cuid())
+  novelId     String
+  sourceId    String
+  sourceType  String
+  targetId    String
+  targetType  String
+  description String?
+  dynamic     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  novel       Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId, sourceId])
+}
+
+model Event {
+  id                 String   @id @default(cuid())
+  novelId            String
+  title              String
+  description        String?
+  chapterId          String?
+  chronologicalOrder Int      @default(0)
+  timestamp          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  novel              Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId])
+}
+
+model Arc {
+  id           String    @id @default(cuid())
+  novelId      String
+  number       Int
+  title        String
+  summary      String?
+  objective    String?
+  conflict     String?
+  chapterStart Int?
+  chapterEnd   Int?
+  status       String    @default("PLANNED")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  novel        Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  chapters     Chapter[]
+  sagaId       String?
+  saga         Saga?     @relation(fields: [sagaId], references: [id], onDelete: SetNull)
+
+  @@unique([novelId, number])
+}
+
+model Chapter {
+  id                 String             @id @default(cuid())
+  novelId            String
+  arcId              String?
+  number             Int
+  title              String?
+  plan               Json?
+  content            String?
+  summary            String?
+  status             ChapterStatus      @default(PLANNED)
+  wordCount          Int?
+  version            Int                @default(1)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  novel              Novel              @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  arc                Arc?               @relation(fields: [arcId], references: [id], onDelete: SetNull)
+  miniArcId          String?
+  miniArc            MiniArc?           @relation(fields: [miniArcId], references: [id], onDelete: SetNull)
+  chapterBlueprintId String?
+  chapterBlueprint   ChapterBlueprint?  @relation(fields: [chapterBlueprintId], references: [id], onDelete: SetNull)
+  scenePlanVersions  ScenePlanVersion[]
+  chapterProse       ChapterProse?
+
+  @@unique([novelId, number, version])
+}
+
+model PlotThread {
+  id                  String   @id @default(cuid())
+  novelId             String
+  title               String
+  description         String
+  introducedChapter   Int?
+  targetPayoffChapter Int?
+  status              String   @default("SETUP")
+  importance          Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  novel               Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+}
+
+model Foreshadowing {
+  id                   String   @id @default(cuid())
+  novelId              String
+  description          String
+  introducedChapter    Int?
+  plannedPayoffChapter Int?
+  payoffDescription    String?
+  status               String   @default("PLANNED")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  novel                Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+}
+
+model GenerationJob {
+  id      String @id @default(cuid())
+  novelId String
+  novel   Novel  @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  stage        ArchitectStage?
+  plannerStage PlannerStage?
+  sceneStage   SceneStage?
+  proseStage   ProseStage?
+  status       GenerationJobStatus @default(QUEUED)
+  provider     String?
+  model        String?
+
+  input  Json?
+  output Json?
+  error  Json?
+
+  retryCount Int @default(0)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([novelId])
+  @@index([status])
+}
+
+model Memory {
+  id         String                       @id @default(cuid())
+  novelId    String
+  chapterId  String?
+  category   String
+  title      String
+  content    String
+  importance Int                          @default(0)
+  metadata   Json?
+  embedding  Unsupported("vector(1536)")?
+  createdAt  DateTime                     @default(now())
+  novel      Novel                        @relation(fields: [novelId], references: [id], onDelete: Cascade)
+}
+
+enum PlanStatus {
+  DRAFT
+  CANONICAL
+  STALE
+}
+
+enum PlannerStage {
+  DESTINATION
+  MACRO
+  SAGA
+  ARC
+  MINI_ARC
+  CHAPTER_BATCH
+}
+
+model StoryPlan {
+  id        String             @id @default(cuid())
+  novelId   String             @unique
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  novel     Novel              @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  versions  StoryPlanVersion[]
+}
+
+model StoryPlanVersion {
+  id          String    @id @default(cuid())
+  planId      String
+  version     Int
+  isCanonical Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  plan        StoryPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  destinations  StoryDestination[]
+  macroPlans    MacroPlan[]
+  sagas         Saga[]
+  characterArcs CharacterArc[]
+  batches       ChapterPlanningBatch[]
+
+  @@unique([planId, version])
+}
+
+model StoryDestination {
+  id                 String           @id @default(cuid())
+  planVersionId      String
+  intendedEnding     String?
+  protagonistState   String?
+  antagonistState    String?
+  unresolvedQs       String?
+  thematicResolution String?
+  majorPayoffs       String?
+  turningPoints      String?
+  emotionalDest      String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  planVersion        StoryPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+}
+
+model MacroPlan {
+  id                 String           @id @default(cuid())
+  planVersionId      String
+  targetChapterCount Int
+  numberOfSagas      Int
+  globalEscalation   String?
+  midpoint           String?
+  climax             String?
+  ending             String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  planVersion        StoryPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+}
+
+model Saga {
+  id              String           @id @default(cuid())
+  planVersionId   String
+  number          Int
+  title           String
+  purpose         String?
+  chapterStart    Int?
+  chapterEnd      Int?
+  primaryConflict String?
+  resolution      String?
+  unresolvedHooks String?
+  status          PlanStatus       @default(DRAFT)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  planVersion     StoryPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+  arcs            Arc[]
+  miniArcs        MiniArc[]
+}
+
+model MiniArc {
+  id           String     @id @default(cuid())
+  sagaId       String
+  number       Int
+  title        String
+  purpose      String?
+  chapterStart Int?
+  chapterEnd   Int?
+  conflict     String?
+  objective    String?
+  turningPoint String?
+  payoff       String?
+  consequence  String?
+  status       PlanStatus @default(DRAFT)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  saga         Saga       @relation(fields: [sagaId], references: [id], onDelete: Cascade)
+  chapters     Chapter[]
+}
+
+model ChapterBlueprint {
+  id                     String     @id @default(cuid())
+  purpose                String?
+  povCharacter           String?
+  location               String?
+  activeCharacters       Json?
+  activePlotThreads      Json?
+  activeConflicts        Json?
+  setup                  String?
+  progression            String?
+  turningPoint           String?
+  endingHook             String?
+  foreshadowingUsed      Json?
+  foreshadowingCreated   Json?
+  characterDevelopment   String?
+  continuityRequirements String?
+  consequences           String?
+  status                 PlanStatus @default(DRAFT)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+  chapters               Chapter[]
+}
+
+model ChapterPlanningBatch {
+  id              String           @id @default(cuid())
+  planVersionId   String
+  batchNumber     Int
+  chapterStart    Int
+  chapterEnd      Int
+  status          String           @default("PENDING")
+  generationJobId String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  planVersion     StoryPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+}
+
+model CharacterArc {
+  id                         String           @id @default(cuid())
+  planVersionId              String
+  characterId                String
+  startingState              String?
+  currentState               String?
+  targetState                String?
+  milestones                 Json?
+  emotionalProgression       String?
+  unresolvedInternalConflict String?
+  transformation             String?
+  status                     String           @default("DRAFT")
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  planVersion                StoryPlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+  character                  Character        @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+model Consequence {
+  id          String   @id @default(cuid())
+  novelId     String
+  targetId    String
+  targetType  String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  novel       Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+}
+
+enum EntityType {
+  CHARACTER
+  ITEM
+  LOCATION
+  FACTION
+  PLOT_THREAD
+  FORESHADOWING
+}
+
+enum SceneStage {
+  SCENE_PLAN
+}
+
+model ScenePlanVersion {
+  id        String     @id @default(cuid())
+  chapterId String
+  version   Int
+  status    PlanStatus @default(DRAFT)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  scenes               Scene[]
+  snapshot             ContinuitySnapshot?
+  chapter              Chapter               @relation(fields: [chapterId], references: [id])
+  chapterProseVersions ChapterProseVersion[]
+}
+
+model Scene {
+  id                 String     @id @default(cuid())
+  scenePlanVersionId String
+  sceneNumber        Int
+  status             PlanStatus @default(DRAFT)
+  function           String
+  povCharacter       String?
+  location           String?
+  time               String?
+  objective          String?
+  conflict           String?
+  obstacle           String?
+  escalation         String?
+  turningPoint       String?
+  outcome            String?
+  emotionalBeat      String?
+  informationControl Json?
+  plotThreads        Json?
+  foreshadowing      Json?
+  transitionToNext   String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  stateChanges     StateChange[]
+  scenePlanVersion ScenePlanVersion @relation(fields: [scenePlanVersionId], references: [id])
+  sceneProses      SceneProse[]
+}
+
+model StateChange {
+  id            String     @id @default(cuid())
+  sceneId       String
+  entityType    EntityType
+  entityId      String
+  property      String
+  previousValue String?
+  newValue      String
+  reason        String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  scene Scene @relation(fields: [sceneId], references: [id])
+}
+
+model ContinuitySnapshot {
+  id                       String     @id @default(cuid())
+  novelId                  String
+  chapterNumber            Int
+  status                   PlanStatus @default(DRAFT)
+  previousSnapshotId       String?
+  sourceScenePlanVersionId String?    @unique
+  characters               Json?
+  items                    Json?
+  locations                Json?
+  factions                 Json?
+  plotThreads              Json?
+  foreshadowing            Json?
+  createdAt                DateTime   @default(now())
+  updatedAt                DateTime   @updatedAt
+
+  novel            Novel                @relation(fields: [novelId], references: [id])
+  scenePlanVersion ScenePlanVersion?    @relation(fields: [sourceScenePlanVersionId], references: [id])
+  previousSnapshot ContinuitySnapshot?  @relation("SnapshotLineage", fields: [previousSnapshotId], references: [id])
+  nextSnapshots    ContinuitySnapshot[] @relation("SnapshotLineage")
+}
+
+enum ProseStatus {
+  DRAFT
+  CANONICAL
+  STALE
+  REJECTED
+  HUMAN_EDITED
+}
+
+enum ProseStage {
+  PROSE_GENERATION
+}
+
+model ChapterProse {
+  id               String   @id @default(cuid())
+  chapterId        String   @unique
+  currentVersionId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  versions ChapterProseVersion[]
+  chapter  Chapter               @relation(fields: [chapterId], references: [id])
+}
+
+model ChapterProseVersion {
+  id                       String      @id @default(cuid())
+  chapterProseId           String
+  sourceScenePlanVersionId String
+  version                  Int
+  status                   ProseStatus @default(DRAFT)
+  generatedAt              DateTime    @default(now())
+  provider                 String?
+  model                    String?
+  tokenMetadata            Json?
+
+  sceneProseList         SceneProse[]
+  chapterProse           ChapterProse     @relation(fields: [chapterProseId], references: [id])
+  sourceScenePlanVersion ScenePlanVersion @relation(fields: [sourceScenePlanVersionId], references: [id])
+}
+
+model SceneProse {
+  id                    String      @id @default(cuid())
+  chapterProseVersionId String
+  scenePlanId           String
+  content               String
+  wordCount             Int         @default(0)
+  status                ProseStatus @default(DRAFT)
+  validationReport      Json?
+  generationMetadata    Json?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  chapterProseVersion ChapterProseVersion @relation(fields: [chapterProseVersionId], references: [id])
+  scene               Scene               @relation(fields: [scenePlanId], references: [id])
+}
