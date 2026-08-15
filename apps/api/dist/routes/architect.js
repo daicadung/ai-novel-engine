@@ -15,11 +15,18 @@ export const architectRoutes = async (app) => {
         if (!novel)
             throw new NotFoundError('Novel not found');
         // Run the first stage via queue
-        await queueManager.addJob(JobType.ARCHITECT_STAGE, {
+        const job = await queueManager.addJob(JobType.ARCHITECT_STAGE, {
             novelId,
             stage: ArchitectStage.CONCEPT
         });
-        return { success: true, message: "Architect started", stage: ArchitectStage.CONCEPT };
+        return reply.status(202).send({
+            success: true,
+            message: "Architect started",
+            stage: ArchitectStage.CONCEPT,
+            jobId: job.id,
+            correlationId: job.id,
+            status: job.status
+        });
     });
     app.get('/novels/:novelId/architect/status', {
         schema: {
@@ -45,8 +52,14 @@ export const architectRoutes = async (app) => {
     }, async (req, reply) => {
         const { novelId, stage } = req.params;
         // Background run via queue
-        await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage });
-        return { success: true, stage, status: "QUEUED" };
+        const job = await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage });
+        return reply.status(202).send({
+            success: true,
+            stage,
+            status: job.status,
+            jobId: job.id,
+            correlationId: job.id
+        });
     });
     app.post('/novels/:novelId/architect/stages/:stage/retry', {
         schema: {
@@ -58,8 +71,14 @@ export const architectRoutes = async (app) => {
     }, async (req, reply) => {
         const { novelId, stage } = req.params;
         // Background run via queue
-        await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage, isRetry: true });
-        return { success: true, stage, status: "QUEUED" };
+        const job = await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage, isRetry: true });
+        return reply.status(202).send({
+            success: true,
+            stage,
+            status: job.status,
+            jobId: job.id,
+            correlationId: job.id
+        });
     });
     app.get('/novels/:novelId/architect/jobs', {
         schema: {

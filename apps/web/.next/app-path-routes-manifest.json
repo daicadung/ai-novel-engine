@@ -1,5 +1,5 @@
 {
   "/_not-found/page": "/_not-found",
-  "/novel/[id]/page": "/novel/[id]",
-  "/page": "/"
+  "/page": "/",
+  "/novel/[id]/page": "/novel/[id]"
 }

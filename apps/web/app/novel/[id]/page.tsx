@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import GenerationJobsList from "../../../components/GenerationJobsList";
+import NovelGenerationDashboard from "../../../components/NovelGenerationDashboard";
 
 export default function NovelPage() {
   const params = useParams();
@@ -77,6 +79,9 @@ export default function NovelPage() {
           )}
         </section>
       </div>
+      
+      <NovelGenerationDashboard novelId={id} />
+      <GenerationJobsList novelId={id} />
     </main>
   );
 }

@@ -16,7 +16,7 @@ export class DatabaseQueueManager implements IQueueManager {
         return {
           id: existing.id,
           type: type,
-          payload: existing.input as JobPayload,
+          payload: existing.input as unknown as JobPayload,
           status: existing.status as unknown as JobStatus,
         };
       }
@@ -70,7 +70,7 @@ export class DatabaseQueueManager implements IQueueManager {
     return {
       id: job.id,
       type,
-      payload: job.input as JobPayload,
+      payload: job.input as unknown as JobPayload,
       status: job.status as unknown as JobStatus
     };
   }

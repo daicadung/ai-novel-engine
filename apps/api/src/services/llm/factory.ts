@@ -4,6 +4,7 @@ import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { GoogleProvider } from './providers/GoogleProvider.js';
 import { OllamaProvider } from './providers/OllamaProvider.js';
 import { MockProvider } from './providers/MockProvider.js';
+import { NineRouterProvider } from './providers/NineRouterProvider.js';
 
 export type PipelineStage = 'ARCHITECT' | 'PLANNER' | 'SCENE' | 'PROSE' | 'REVISION';
 
@@ -35,6 +36,8 @@ export class ProviderFactory {
         return new GoogleProvider(undefined, modelName);
       case 'ollama':
         return new OllamaProvider(undefined, modelName);
+      case '9router':
+        return new NineRouterProvider(undefined, undefined, modelName);
       case 'mock':
       default:
         return new MockProvider();

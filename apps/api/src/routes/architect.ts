@@ -18,12 +18,19 @@ export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
     if (!novel) throw new NotFoundError('Novel not found');
 
     // Run the first stage via queue
-    await queueManager.addJob(JobType.ARCHITECT_STAGE, {
+    const job = await queueManager.addJob(JobType.ARCHITECT_STAGE, {
       novelId,
       stage: ArchitectStage.CONCEPT
     });
 
-    return { success: true, message: "Architect started", stage: ArchitectStage.CONCEPT };
+    return reply.status(202).send({ 
+      success: true, 
+      message: "Architect started", 
+      stage: ArchitectStage.CONCEPT,
+      jobId: job.id,
+      correlationId: job.id,
+      status: job.status
+    });
   });
 
   app.get('/novels/:novelId/architect/status', {
@@ -52,9 +59,15 @@ export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
     const { novelId, stage } = req.params;
     
     // Background run via queue
-    await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage });
+    const job = await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage });
 
-    return { success: true, stage, status: "QUEUED" };
+    return reply.status(202).send({ 
+      success: true, 
+      stage, 
+      status: job.status,
+      jobId: job.id,
+      correlationId: job.id
+    });
   });
 
   app.post('/novels/:novelId/architect/stages/:stage/retry', {
@@ -68,9 +81,15 @@ export const architectRoutes: FastifyPluginAsyncZod = async (app) => {
     const { novelId, stage } = req.params;
     
     // Background run via queue
-    await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage, isRetry: true });
+    const job = await queueManager.addJob(JobType.ARCHITECT_STAGE, { novelId, stage, isRetry: true });
 
-    return { success: true, stage, status: "QUEUED" };
+    return reply.status(202).send({ 
+      success: true, 
+      stage, 
+      status: job.status,
+      jobId: job.id,
+      correlationId: job.id
+    });
   });
 
   app.get('/novels/:novelId/architect/jobs', {

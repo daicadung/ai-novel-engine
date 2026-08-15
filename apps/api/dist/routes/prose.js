@@ -1,12 +1,13 @@
-import { ProseManager } from '../services/prose/manager.js';
+import { JobType } from '@ane/core';
+import { QueueFactory } from '../services/queue/index.js';
 import { db } from '@ane/database';
 export default async function proseRoutes(fastify) {
-    const manager = new ProseManager();
+    const queueManager = QueueFactory.getQueueManager();
     fastify.post('/:novelId/chapters/:chapterId/prose/generate', async (request, reply) => {
         const { novelId, chapterId } = request.params;
         const { scenePlanVersionId, previousSnapshotId } = request.body;
-        manager.runProseGeneration(novelId, chapterId, scenePlanVersionId, previousSnapshotId || null).catch(console.error);
-        return reply.status(202).send({ message: 'Generation started' });
+        const job = await queueManager.addJob(JobType.PROSE_GENERATION, { novelId, chapterId, scenePlanVersionId, previousSnapshotId });
+        return reply.status(202).send({ jobId: job.id, status: job.status, correlationId: job.id, message: 'Generation started' });
     });
     fastify.get('/:novelId/chapters/:chapterId/prose', async (request, reply) => {
         const { chapterId } = request.params;

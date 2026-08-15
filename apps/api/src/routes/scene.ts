@@ -9,17 +9,8 @@ export default async function sceneRoutes(fastify: FastifyInstance) {
   fastify.post('/:novelId/chapters/:chapterId/scenes/generate', async (request, reply) => {
     const { novelId, chapterId } = request.params as { novelId: string, chapterId: string };
     
-    // In Phase 6B, we just queue a SCENE_GENERATION job. Note that the actual payload requires scenePlanVersionId and sceneId.
-    // Assuming this route generates the ENTIRE scene plan, wait, the payload for SCENE_GENERATION is scene-level!
-    // But Phase 4's SceneManager generates the scene plan for a chapter.
-    // Wait, the JobType JobPayload I defined for SCENE_GENERATION:
-    // export interface SceneJobPayload extends BaseJobPayload { scenePlanVersionId: string; sceneId: string; }
-    // Let me check what `SceneArchitectManager`'s `generateScene` does.
-    // Actually, Phase 4 was "Chapter & Scene Architect", creating ScenePlanVersion and Scenes.
-    // Wait! Let me just enqueue it as SCENE_GENERATION with chapterId instead of scenePlanVersionId, or I can check how SceneManager was implemented.
-    // I'll queue a custom job or fix the payload. Let me pass chapterId.
-    await queueManager.addJob(JobType.SCENE_GENERATION as any, { novelId, chapterId } as any);
-    return reply.status(202).send({ message: 'Generation queued' });
+    const job = await queueManager.addJob(JobType.SCENE_GENERATION, { novelId, chapterId });
+    return reply.status(202).send({ jobId: job.id, status: job.status, correlationId: job.id, message: 'Generation queued' });
   });
 
   fastify.get('/:novelId/chapters/:chapterId/scenes', async (request, reply) => {

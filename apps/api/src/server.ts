@@ -3,7 +3,6 @@ import fp from 'fastify-plugin';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
 import corsPlugin from "./plugins/cors.js";
 import dbPlugin from "./plugins/database.js";
-import redisPlugin from "./plugins/redis.js";
 
 import { novelRoutes } from "./routes/novels.js";
 import { storyBibleRoutes } from "./routes/story-bibles.js";
@@ -21,6 +20,8 @@ import { architectRoutes } from "./routes/architect.js";
 import plannerRoutes from './routes/planner.js';
 import sceneRoutes from './routes/scene.js';
 import proseRoutes from './routes/prose.js';
+import { internalRoutes } from './routes/internal.js';
+import { generationRoutes } from './routes/generation.js';
 
 import { NotFoundError, ValidationError } from "./errors/index.js";
 
@@ -45,7 +46,6 @@ app.setErrorHandler((error: any, request, reply) => {
 
 await app.register(corsPlugin);
 await app.register(dbPlugin);
-await app.register(redisPlugin);
 
 app.get("/health", async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
@@ -67,6 +67,8 @@ await app.register(architectRoutes, { prefix: '/api/architect' });
 await app.register(plannerRoutes, { prefix: '/api/planner' });
 await app.register(sceneRoutes, { prefix: '/api/scene' });
 await app.register(proseRoutes, { prefix: '/api/prose' });
+await app.register(internalRoutes, { prefix: '/api/internal' });
+await app.register(generationRoutes, { prefix: '/api' });
 
 export { app };
 

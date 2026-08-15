@@ -19,6 +19,20 @@ enum NovelStatus {
   ARCHIVED
 }
 
+enum NovelGenerationState {
+  DRAFT
+  INITIALIZING
+  ARCHITECTING
+  PLANNING
+  GENERATING_CHAPTERS
+  GENERATING_SCENES
+  GENERATING_PROSE
+  PAUSED
+  COMPLETED
+  FAILED
+  BLOCKED
+}
+
 enum ChapterStatus {
   PLANNED
   GENERATING
@@ -81,6 +95,22 @@ model Novel {
   architectStage  ArchitectStage?
   architectStatus ArchitectStatus? @default(NOT_STARTED)
 
+  // Phase 8: Autonomous generation configuration
+  generationState       NovelGenerationState @default(DRAFT)
+  autoContinue          Boolean              @default(false)
+  autoGenerateScenes    Boolean              @default(true)
+  autoGenerateProse     Boolean              @default(true)
+  maxConcurrentJobs     Int                  @default(3)
+  chapterBatchSize      Int                  @default(10)
+  generationWindowSize  Int                  @default(2)
+  maxGenerationCostUsd  Float?
+  correlationId         String?
+
+  // Phase 9: Continuity tracking
+  currentStoryStateId   String?   // Points to latest canonical StoryState
+  lastCanonicalChapter  Int       @default(0)
+  continuityEnabled     Boolean   @default(true)
+
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   storyBibles    StoryBible[]
@@ -99,6 +129,8 @@ model Novel {
   storyPlan      StoryPlan?
   consequences   Consequence[]
   snapshots      ContinuitySnapshot[]
+  storyStates    StoryStateRecord[]
+  chapterMemories ChapterMemoryRecord[]
 }
 
 model StoryBible {
@@ -306,6 +338,8 @@ model GenerationJob {
 
   retryCount Int @default(0)
   maxRetries Int @default(3)
+
+  idempotencyKey String? @unique
 
   lockedAt      DateTime?
   lockedBy      String?
@@ -664,4 +698,77 @@ model SceneProse {
 
   chapterProseVersion ChapterProseVersion @relation(fields: [chapterProseVersionId], references: [id])
   scene               Scene               @relation(fields: [scenePlanId], references: [id])
+}
+
+// ====================================================================
+// Phase 9: Canonical Story State
+// ====================================================================
+
+model StoryStateRecord {
+  id            String   @id @default(cuid())
+  novelId       String
+  asOfChapter   Int
+  // JSON representation of StoryState — structured but stored as Json for flexibility
+  state         Json
+  // Only one CANONICAL state per novel (the latest)
+  isCanonical   Boolean  @default(false)
+  snapshotId    String?  // linked ContinuitySnapshot
+  createdAt     DateTime @default(now())
+  novel         Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId, asOfChapter])
+  @@index([novelId, isCanonical])
+}
+
+// ====================================================================
+// Phase 9: Chapter Memory — compact structured per-chapter memory
+// ====================================================================
+
+model ChapterMemoryRecord {
+  id            String   @id @default(cuid())
+  novelId       String
+  chapterId     String   @unique
+  chapterNumber Int
+  summary       String
+  keyEvents     Json     // string[]
+  stateDeltas   Json     // StateDelta[]
+  metadata      Json?    // full ChapterMemory
+  createdAt     DateTime @default(now())
+  novel         Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@index([novelId, chapterNumber])
+}
+
+// ====================================================================
+// Phase 9: Knowledge State — per-character POV knowledge
+// ====================================================================
+
+model KnowledgeStateRecord {
+  id            String   @id @default(cuid())
+  novelId       String
+  characterId   String
+  asOfChapter   Int
+  knowledge     Json     // KnowledgeState serialized
+  isCanonical   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([novelId, characterId, asOfChapter])
+  @@index([novelId, characterId, isCanonical])
+}
+
+// ====================================================================
+// Phase 9: Quality Gate result per prose version
+// ====================================================================
+
+model ProseQualityGate {
+  id                   String   @id @default(cuid())
+  chapterProseVersionId String
+  chapterId            String
+  novelId              String
+  result               String   // PASS | WARN | FAIL
+  report               Json     // QualityGateReport
+  createdAt            DateTime @default(now())
+
+  @@index([novelId, chapterId])
+  @@index([chapterProseVersionId])
 }

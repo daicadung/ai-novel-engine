@@ -1,1 +1,15 @@
 node_modules
+dist
+.turbo
+*.tsbuildinfo
+
+# --- SECRETS: Never commit these ---
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+
+# Prisma generated
+packages/database/prisma/generated/

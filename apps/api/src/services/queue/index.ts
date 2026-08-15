@@ -1,5 +1,5 @@
 import { IQueueManager } from './types.js';
-import { BullQueueManager } from './BullQueueManager.js';
+import { DatabaseQueueManager } from './DatabaseQueueManager.js';
 import { MemoryQueueManager } from './MemoryQueueManager.js';
 
 export class QueueFactory {
@@ -10,7 +10,7 @@ export class QueueFactory {
       if (process.env.NODE_ENV === 'test') {
         this.instance = new MemoryQueueManager();
       } else {
-        this.instance = new BullQueueManager();
+        this.instance = new DatabaseQueueManager();
       }
     }
     return this.instance;
@@ -22,6 +22,6 @@ export class QueueFactory {
 }
 
 export * from './types.js';
-export * from './BullQueueManager.js';
+export * from './DatabaseQueueManager.js';
 export * from './MemoryQueueManager.js';
-export * from './workerFactory.js';
+export * from './MemoryWorker.js';

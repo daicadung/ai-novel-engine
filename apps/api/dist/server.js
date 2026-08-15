@@ -2,7 +2,6 @@ import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import corsPlugin from "./plugins/cors.js";
 import dbPlugin from "./plugins/database.js";
-import redisPlugin from "./plugins/redis.js";
 import { novelRoutes } from "./routes/novels.js";
 import { storyBibleRoutes } from "./routes/story-bibles.js";
 import { characterRoutes } from "./routes/characters.js";
@@ -19,6 +18,8 @@ import { architectRoutes } from "./routes/architect.js";
 import plannerRoutes from './routes/planner.js';
 import sceneRoutes from './routes/scene.js';
 import proseRoutes from './routes/prose.js';
+import { internalRoutes } from './routes/internal.js';
+import { generationRoutes } from './routes/generation.js';
 import { NotFoundError, ValidationError } from "./errors/index.js";
 const app = Fastify({ logger: true }).withTypeProvider();
 app.setValidatorCompiler(validatorCompiler);
@@ -38,7 +39,6 @@ app.setErrorHandler((error, request, reply) => {
 });
 await app.register(corsPlugin);
 await app.register(dbPlugin);
-await app.register(redisPlugin);
 app.get("/health", async () => {
     return { status: "ok", timestamp: new Date().toISOString() };
 });
@@ -58,6 +58,8 @@ await app.register(architectRoutes, { prefix: '/api/architect' });
 await app.register(plannerRoutes, { prefix: '/api/planner' });
 await app.register(sceneRoutes, { prefix: '/api/scene' });
 await app.register(proseRoutes, { prefix: '/api/prose' });
+await app.register(internalRoutes, { prefix: '/api/internal' });
+await app.register(generationRoutes, { prefix: '/api' });
 export { app };
 if (process.argv[1] && (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.js'))) {
     await app.listen({ host: "0.0.0.0", port: Number(process.env.API_PORT ?? 3001) });

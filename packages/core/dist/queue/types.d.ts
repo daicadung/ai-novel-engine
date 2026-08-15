@@ -48,9 +48,12 @@ export interface JobOptions {
 }
 export declare enum JobStatus {
     QUEUED = "QUEUED",
+    CLAIMED = "CLAIMED",
     RUNNING = "RUNNING",
     COMPLETED = "COMPLETED",
     FAILED = "FAILED",
     PAUSED = "PAUSED",
-    CANCELLED = "CANCELLED"
+    CANCELLED = "CANCELLED",
+    RETRY_PENDING = "RETRY_PENDING",
+    BLOCKED = "BLOCKED"
 }

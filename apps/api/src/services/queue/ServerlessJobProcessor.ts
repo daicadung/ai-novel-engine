@@ -2,66 +2,130 @@ import { db } from '@ane/database';
 import { JobDispatcher } from './JobDispatcher.js';
 import { JobType } from '@ane/core';
 
-const JOB_LOCK_TIMEOUT_MS = parseInt(process.env.JOB_LOCK_TIMEOUT_SECONDS || '300', 10) * 1000;
+const JOB_LOCK_TIMEOUT_MS = parseInt(process.env.JOB_LOCK_TIMEOUT_MS || '180000', 10);
+const MAX_RETRIES = parseInt(process.env.MAX_RETRIES || '3', 10);
+const JOB_BATCH_SIZE = parseInt(process.env.JOB_BATCH_SIZE || '3', 10);
+const JOB_PROCESSOR_TIMEOUT_MS = parseInt(process.env.JOB_PROCESSOR_TIMEOUT_MS || '50000', 10);
+
+export interface ProcessorResult {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  retryPending: number;
+  recovered: number;
+}
 
 export class ServerlessJobProcessor {
   private dispatcher = new JobDispatcher();
 
-  async processNextBatch(maxJobs: number = parseInt(process.env.MAX_JOBS_PER_RUN || '5', 10)) {
-    const workerId = `worker-${Math.random().toString(36).substring(7)}-${Date.now()}`;
-    
-    // 1. Recover stale jobs
-    await this.recoverStaleJobs();
+  async processNextBatch(batchSize: number = JOB_BATCH_SIZE): Promise<ProcessorResult> {
+    // Unique worker ID for lock tracking
+    const workerId = `worker-${crypto.randomUUID()}`;
 
-    // 2. Claim jobs
-    const jobs = await this.claimJobs(maxJobs, workerId);
-    
-    const results = {
+    // Soft processor deadline: stop CLAIMING new jobs after this timestamp
+    const deadline = Date.now() + JOB_PROCESSOR_TIMEOUT_MS;
+
+    const results: ProcessorResult = {
       processed: 0,
-      completed: 0,
+      succeeded: 0,
       failed: 0,
-      retried: 0,
+      retryPending: 0,
+      recovered: 0,
     };
 
-    // 3. Process jobs
-    for (const job of jobs) {
+    // 1. Recover stale jobs first
+    results.recovered = await this.recoverStaleJobs();
+
+    // 2. Claim jobs — up to batchSize, but stop if we're near the soft deadline
+    for (let i = 0; i < batchSize; i++) {
+      // SOFT DEADLINE CHECK: before claiming each new job, check if we still have time
+      if (Date.now() >= deadline) {
+        break;
+      }
+
+      const job = await this.claimNextJob(workerId);
+      if (!job) break; // No more eligible jobs
+
       results.processed++;
+
+      // Transition to RUNNING — this is separate from the claim transaction
+      // so we don't hold the DB lock during LLM execution
       try {
         await db.generationJob.update({
           where: { id: job.id },
           data: { status: 'RUNNING', startedAt: new Date() }
         });
+      } catch (updateErr: any) {
+        // If the update failed, the job may have already been processed by another worker
+        // Skip it to avoid double-processing
+        results.processed--;
+        continue;
+      }
 
-        // Map type
-        const payload = job.input as any;
-        let type = JobType.PROSE_GENERATION;
-        if (job.stage) type = JobType.ARCHITECT_STAGE;
-        else if (job.plannerStage) type = JobType.PLANNER_STAGE;
-        else if (job.sceneStage) type = JobType.SCENE_GENERATION;
-        else if (job.proseStage) type = JobType.PROSE_GENERATION;
-        else if (payload && payload.type && Object.values(JobType).includes(payload.type)) {
-          type = payload.type;
-        } else if (payload && payload.stage) {
-          if (Object.values(JobType).includes(payload.type)) type = payload.type;
+      // Determine job type from input payload
+      const payload = job.input as any;
+      let type: JobType = JobType.PROSE_GENERATION;
+      if (job.stage) type = JobType.ARCHITECT_STAGE;
+      else if (job.plannerStage) type = JobType.PLANNER_STAGE;
+      else if (job.sceneStage) type = JobType.SCENE_GENERATION;
+      else if (job.proseStage) type = JobType.PROSE_GENERATION;
+      else if (payload?.type && Object.values(JobType).includes(payload.type)) {
+        type = payload.type;
+      }
+
+      // Execute the job — do NOT abort this even if deadline is reached
+      // The soft deadline only gates claiming new jobs
+      const startTime = Date.now();
+      try {
+        const result = await this.dispatcher.dispatch(type, payload, job.id);
+        const latencyMs = Date.now() - startTime;
+
+        // Persist success with observability fields
+        const usageUpdate: Record<string, any> = {
+          status: 'SUCCEEDED',
+          output: result || {},
+          completedAt: new Date(),
+        };
+
+        // Pull usage metrics from payload if dispatcher propagated them
+        if (result?.usage) {
+          usageUpdate.inputTokens = result.usage.inputTokens;
+          usageUpdate.outputTokens = result.usage.outputTokens;
+          usageUpdate.totalTokens = result.usage.totalTokens;
+          usageUpdate.estimatedCostUsd = result.usage.estimatedCostUsd;
+          usageUpdate.provider = result.usage.provider;
+          usageUpdate.model = result.usage.model;
         }
-
-        const result = await this.dispatcher.dispatch(type, payload);
 
         await db.generationJob.update({
           where: { id: job.id },
-          data: {
-            status: 'SUCCEEDED',
-            output: result || {},
-            completedAt: new Date(),
-          }
+          data: usageUpdate,
         });
-        results.completed++;
+        results.succeeded++;
+
+        // AUTO-CONTINUE: If the novel has autoContinue enabled, trigger the next
+        // safe orchestration step. This does NOT call any LLM — it only evaluates
+        // what the next job should be and creates a GenerationJob record.
+        // The next Cron invocation will execute that job.
+        try {
+          const novelForContinue = await db.novel.findUnique({ where: { id: job.novelId } });
+          if (novelForContinue?.autoContinue) {
+            const { NovelGenerationOrchestrator } = await import('../generation/NovelGenerationOrchestrator.js');
+            const orchestrator = new NovelGenerationOrchestrator();
+            await orchestrator.advance(job.novelId);
+          }
+        } catch (continueErr: any) {
+          // AutoContinue errors must never affect the job result
+          // Log the error but do not rethrow
+          console.warn(`[AutoContinue] Failed to advance novel ${job.novelId}: ${continueErr.message}`);
+        }
+
       } catch (error: any) {
-        // Handle failure and retries
         const retryCount = job.retryCount + 1;
-        if (retryCount <= job.maxRetries) {
-          // Retry
-          const delayMs = Math.pow(2, retryCount) * 1000; // Exponential backoff
+
+        if (retryCount <= (job.maxRetries ?? MAX_RETRIES)) {
+          // Exponential backoff: 2^retryCount seconds
+          const delayMs = Math.pow(2, retryCount) * 1000;
           await db.generationJob.update({
             where: { id: job.id },
             data: {
@@ -70,18 +134,29 @@ export class ServerlessJobProcessor {
               scheduledAt: new Date(Date.now() + delayMs),
               lockedAt: null,
               lockedBy: null,
-              error: { message: error.message, stack: error.stack }
+              failedAt: null,
+              error: {
+                message: error.message,
+                code: error.code,
+                retryCount,
+              }
             }
           });
-          results.retried++;
+          results.retryPending++;
         } else {
-          // Fail completely
           await db.generationJob.update({
             where: { id: job.id },
             data: {
               status: 'FAILED',
               failedAt: new Date(),
-              error: { message: error.message, stack: error.stack }
+              lockedAt: null,
+              lockedBy: null,
+              error: {
+                message: error.message,
+                code: error.code,
+                finalRetryCount: retryCount,
+                reason: 'MAX_RETRIES_EXCEEDED',
+              }
             }
           });
           results.failed++;
@@ -92,43 +167,44 @@ export class ServerlessJobProcessor {
     return results;
   }
 
-  private async claimJobs(limit: number, workerId: string) {
-    // Atomic claiming using raw SQL to ensure FOR UPDATE SKIP LOCKED
-    // We update up to 'limit' jobs that are QUEUED or RETRY_PENDING and have no future scheduledAt
-    // Prisma doesn't have a native UPDATE ... LIMIT, so we use executeRaw or similar.
-    
-    const claimedJobIds: { id: string }[] = await db.$queryRaw`
+  /**
+   * Atomically claim a single eligible job using FOR UPDATE SKIP LOCKED.
+   * Returns null if no eligible job exists.
+   */
+  private async claimNextJob(workerId: string) {
+    // Raw SQL: claim a single QUEUED or RETRY_PENDING job atomically
+    // The FOR UPDATE SKIP LOCKED prevents concurrent processors from double-claiming
+    const claimedIds: { id: string }[] = await db.$queryRaw`
       UPDATE "GenerationJob"
       SET 
         status = 'CLAIMED',
         "lockedAt" = NOW(),
         "lockedBy" = ${workerId}
-      WHERE id IN (
+      WHERE id = (
         SELECT id FROM "GenerationJob"
         WHERE (status = 'QUEUED' OR status = 'RETRY_PENDING')
           AND ("scheduledAt" IS NULL OR "scheduledAt" <= NOW())
         ORDER BY "createdAt" ASC
         FOR UPDATE SKIP LOCKED
-        LIMIT ${limit}
+        LIMIT 1
       )
       RETURNING id;
     `;
 
-    if (!claimedJobIds || claimedJobIds.length === 0) {
-      return [];
-    }
+    if (!claimedIds || claimedIds.length === 0) return null;
 
-    const ids = claimedJobIds.map(j => j.id);
-
-    return db.generationJob.findMany({
-      where: { id: { in: ids } }
+    return db.generationJob.findUnique({
+      where: { id: claimedIds[0].id }
     });
   }
 
-  private async recoverStaleJobs() {
+  /**
+   * Recover stale CLAIMED/RUNNING jobs whose lock has expired.
+   * Returns the count of recovered jobs.
+   */
+  private async recoverStaleJobs(): Promise<number> {
     const staleThreshold = new Date(Date.now() - JOB_LOCK_TIMEOUT_MS);
-    
-    // Find stale jobs
+
     const staleJobs = await db.generationJob.findMany({
       where: {
         status: { in: ['CLAIMED', 'RUNNING'] },
@@ -136,9 +212,13 @@ export class ServerlessJobProcessor {
       }
     });
 
+    let recovered = 0;
+
     for (const job of staleJobs) {
       const retryCount = job.retryCount + 1;
-      if (retryCount <= job.maxRetries) {
+
+      if (retryCount <= (job.maxRetries ?? MAX_RETRIES)) {
+        // Return to RETRY_PENDING with a short delay for stale recovery
         await db.generationJob.update({
           where: { id: job.id },
           data: {
@@ -146,20 +226,36 @@ export class ServerlessJobProcessor {
             lockedAt: null,
             lockedBy: null,
             retryCount,
-            scheduledAt: new Date(Date.now() + 5000), // Quick retry for stale recovery
-            error: { message: 'Job recovered from stale lock timeout' }
+            scheduledAt: new Date(Date.now() + 10000), // 10 second recovery delay
+            error: {
+              message: 'Job recovered from stale lock',
+              staleSince: staleThreshold.toISOString(),
+              workerId: job.lockedBy,
+              retryCount,
+            }
           }
         });
+        recovered++;
       } else {
         await db.generationJob.update({
           where: { id: job.id },
           data: {
             status: 'FAILED',
             failedAt: new Date(),
-            error: { message: 'Job failed completely due to repeated stale lock timeouts' }
+            lockedAt: null,
+            lockedBy: null,
+            error: {
+              message: 'Job failed after repeated stale lock timeouts',
+              finalRetryCount: retryCount,
+              reason: 'MAX_RETRIES_EXCEEDED_VIA_STALE_RECOVERY',
+            }
           }
         });
+        // Count as recovered even if final-failed (removed from stuck state)
+        recovered++;
       }
     }
+
+    return recovered;
   }
 }

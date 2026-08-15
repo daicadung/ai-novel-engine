@@ -1,4 +1,4 @@
-import { BullQueueManager } from './BullQueueManager.js';
+import { DatabaseQueueManager } from './DatabaseQueueManager.js';
 import { MemoryQueueManager } from './MemoryQueueManager.js';
 export class QueueFactory {
     static instance = null;
@@ -8,7 +8,7 @@ export class QueueFactory {
                 this.instance = new MemoryQueueManager();
             }
             else {
-                this.instance = new BullQueueManager();
+                this.instance = new DatabaseQueueManager();
             }
         }
         return this.instance;
@@ -18,6 +18,6 @@ export class QueueFactory {
     }
 }
 export * from './types.js';
-export * from './BullQueueManager.js';
+export * from './DatabaseQueueManager.js';
 export * from './MemoryQueueManager.js';
-export * from './workerFactory.js';
+export * from './MemoryWorker.js';

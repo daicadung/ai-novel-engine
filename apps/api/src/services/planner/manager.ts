@@ -2,7 +2,7 @@ import { db } from '@ane/database';
 import { LLMProvider } from '../architect/llm.js';
 import * as Handlers from './handlers.js';
 import { ProviderFactory } from '../llm/factory.js';
-import { PlannerStage, PLANNER_STAGE_REGISTRY } from '@ane/core';
+import { PlannerStage } from '@ane/core';
 import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
 
 export class StoryPlannerManager {
@@ -20,22 +20,40 @@ export class StoryPlannerManager {
     this.handlers.set(PlannerStage.CHAPTER_BATCH, new Handlers.ChapterBatchStageHandler(this.provider));
   }
 
-  async runStage(novelId: string, stage: PlannerStage, parentId?: string): Promise<void> {
+  /**
+   * Execute a planner stage.
+   * NOTE: GenerationJob must already exist (created by DatabaseQueueManager).
+   * This method executes the domain work. Job status updates are owned by ServerlessJobProcessor.
+   *
+   * @param novelId   - The novel being planned
+   * @param stage     - The PlannerStage to run
+   * @param parentId  - Optional parent ID (for SAGA/ARC/MINI_ARC)
+   * @param jobId     - Optional existing GenerationJob ID for usage tracking
+   */
+  async runStage(novelId: string, stage: PlannerStage, parentId?: string, jobId?: string): Promise<void> {
     const handler = this.handlers.get(stage);
-    if (!handler) throw new Error("No handler found for stage: " + stage);
-    
-    // Concurrency check
-    const activeJob = await db.generationJob.findFirst({
-      where: { novelId, plannerStage: stage, status: 'RUNNING' }
+    if (!handler) throw new Error('No handler found for stage: ' + stage);
+
+    // Concurrency guard — prevent double-execution when multiple workers pick up the same stage
+    // (In practice, FOR UPDATE SKIP LOCKED prevents this, but defend in depth)
+    const runningJob = await db.generationJob.findFirst({
+      where: {
+        novelId,
+        plannerStage: stage,
+        status: { in: ['RUNNING', 'CLAIMED'] },
+        id: { not: jobId ?? '' }
+      }
     });
-    if (activeJob) throw new Error("Stage is already running: " + stage);
+    if (runningJob) {
+      throw new Error(`Planner stage ${stage} is already being processed by job ${runningJob.id}`);
+    }
 
     // Get active StoryPlanVersion or create v1
     let plan = await db.storyPlan.findUnique({ where: { novelId } });
     if (!plan) {
       plan = await db.storyPlan.create({ data: { novelId } });
     }
-    
+
     let activeVersion = await db.storyPlanVersion.findFirst({
       where: { planId: plan.id, isCanonical: true },
       orderBy: { version: 'desc' }
@@ -47,40 +65,31 @@ export class StoryPlannerManager {
       });
     }
 
-    const job = await db.generationJob.create({
-      data: {
-        novelId,
-        plannerStage: stage,
-        status: 'RUNNING',
-        provider: 'MockProvider',
-        startedAt: new Date()
-      }
-    });
-
     const originalProvider = handler.provider;
-    handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, stage, undefined, job.id) as any;
+
+    // Wrap with usage proxy if we have a jobId
+    if (jobId) {
+      handler.provider = new LLMUsageProxy(
+        originalProvider,
+        originalProvider.getProviderName(),
+        novelId,
+        stage,
+        undefined,
+        jobId
+      ) as any;
+    }
 
     try {
       const prompt = await handler.prepareInput(novelId, parentId);
       const fullPrompt = `${prompt}\nPLANNER_STAGE: ${stage}`;
       const output = await handler.invoke(fullPrompt);
-      
-      // We run in a transaction to safely promote candidate
+
+      // Transactional canonical persistence — historical versions are NEVER deleted
       await db.$transaction(async (tx) => {
         await handler.applyCanonicalPersistence(novelId, activeVersion.id, output, tx, parentId);
       });
-      
-      await db.generationJob.update({
-        where: { id: job.id },
-        data: { status: 'SUCCEEDED', output: output as any, completedAt: new Date() }
-      });
+
       return;
-    } catch (e: any) {
-      await db.generationJob.update({
-        where: { id: job.id },
-        data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
-      });
-      throw e;
     } finally {
       handler.provider = originalProvider;
     }

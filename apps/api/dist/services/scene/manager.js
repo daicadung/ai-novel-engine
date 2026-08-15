@@ -10,32 +10,45 @@ export class SceneManager {
         this.provider = provider || ProviderFactory.getProvider('SCENE');
         this.handler = new SceneStageHandler(this.provider);
     }
-    async runStage(novelId, chapterId, previousSnapshotId) {
+    /**
+     * Execute scene plan generation for a chapter.
+     * NOTE: GenerationJob must already exist (created by DatabaseQueueManager).
+     * This method executes the domain work. Job status updates are owned by ServerlessJobProcessor.
+     *
+     * @param novelId           - The novel being processed
+     * @param chapterId         - The chapter to generate scenes for
+     * @param previousSnapshotId - Optional ID of previous continuity snapshot
+     * @param jobId             - Optional existing GenerationJob ID for usage tracking
+     */
+    async runStage(novelId, chapterId, previousSnapshotId, jobId) {
         const chapter = await db.chapter.findUnique({ where: { id: chapterId } });
         if (!chapter)
-            throw new Error("Chapter not found");
-        const activeJob = await db.generationJob.findFirst({
-            where: { novelId, sceneStage: 'SCENE_PLAN', status: 'RUNNING' }
-        });
-        if (activeJob)
-            throw new Error("Stage is already running");
-        const job = await db.generationJob.create({
-            data: {
+            throw new Error('Chapter not found');
+        if (chapter.novelId !== novelId)
+            throw new Error('Chapter does not belong to the given novel');
+        // Concurrency guard — defend in depth against double-processing
+        const runningJob = await db.generationJob.findFirst({
+            where: {
                 novelId,
                 sceneStage: 'SCENE_PLAN',
-                status: 'RUNNING',
-                provider: 'MockProvider',
-                startedAt: new Date()
+                status: { in: ['RUNNING', 'CLAIMED'] },
+                id: { not: jobId ?? '' }
             }
         });
+        if (runningJob) {
+            throw new Error(`Scene plan generation already in progress for novel ${novelId}: job ${runningJob.id}`);
+        }
         const originalProvider = this.handler.provider;
-        this.handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, 'SCENE_PLAN', chapterId, job.id);
+        // Wrap with usage proxy if we have a jobId
+        if (jobId) {
+            this.handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, 'SCENE_PLAN', chapterId, jobId);
+        }
         try {
-            // 1. Generate Candidate
+            // 1. Generate candidate
             const prompt = await this.handler.prepareInput(novelId, chapterId, previousSnapshotId);
             const fullPrompt = `${prompt}\nSTAGE: SCENE_PLAN`;
             const output = await this.handler.invoke(fullPrompt);
-            // 2. Fetch Before State (previous snapshot)
+            // 2. Fetch before state (previous snapshot)
             let prevSnapshot = null;
             if (previousSnapshotId) {
                 prevSnapshot = await db.continuitySnapshot.findUnique({ where: { id: previousSnapshotId } });
@@ -56,17 +69,16 @@ export class SceneManager {
             } : {
                 characters: {}, items: {}, locations: {}, factions: {}, plotThreads: {}, foreshadowing: {}
             };
-            // 3. Zod validation is handled by invoke()
-            // 4. Domain & Continuity Validation
-            const allStateChanges = output.scenes.flatMap(s => s.stateChanges);
+            // 3. Compute continuity after-state
+            const allStateChanges = output.scenes.flatMap((s) => s.stateChanges);
             const afterState = ContinuityValidator.computeAfterState(beforeState, allStateChanges);
-            // 5. Transactional Promotion
+            // 4. Transactional canonical promotion — old versions become STALE, never deleted
             await db.$transaction(async (tx) => {
-                // Mark old version and scenes STALE
                 const oldCanonical = await tx.scenePlanVersion.findFirst({
                     where: { chapterId, status: 'CANONICAL' }
                 });
                 if (oldCanonical) {
+                    // Mark old version and its scenes STALE — do NOT delete
                     await tx.scenePlanVersion.update({
                         where: { id: oldCanonical.id },
                         data: { status: 'STALE' }
@@ -75,11 +87,11 @@ export class SceneManager {
                         where: { scenePlanVersionId: oldCanonical.id },
                         data: { status: 'STALE' }
                     });
-                    // Note: snapshot belonging to the old version remains intact (immutable)
+                    // Note: continuity snapshot attached to old version remains immutable
                 }
                 const newVersionNum = oldCanonical ? oldCanonical.version + 1 : 1;
                 const newVersionId = await this.handler.applyCanonicalPersistence(chapterId, output, tx, newVersionNum);
-                // 6. Create resulting snapshot
+                // 5. Create continuity snapshot for the new version
                 await tx.continuitySnapshot.create({
                     data: {
                         novelId,
@@ -96,19 +108,9 @@ export class SceneManager {
                     }
                 });
             });
-            await db.generationJob.update({
-                where: { id: job.id },
-                data: { status: 'SUCCEEDED', output: output, completedAt: new Date() }
-            });
-        }
-        catch (e) {
-            await db.generationJob.update({
-                where: { id: job.id },
-                data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
-            });
-            throw e;
         }
         finally {
+            // Always restore original provider — even if generation failed
             this.handler.provider = originalProvider;
         }
     }

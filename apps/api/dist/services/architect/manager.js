@@ -44,24 +44,28 @@ export class ArchitectManager {
         }
         return downstream;
     }
-    async runStage(novelId, stage, isRetry = false) {
+    /**
+     * Execute an architect stage.
+     * NOTE: GenerationJob must already exist (created by DatabaseQueueManager).
+     * This method executes the domain work and updates the existing job.
+     *
+     * @param novelId  - The novel to architect
+     * @param stage    - The ArchitectStage to run
+     * @param isRetry  - Whether this is a retry
+     * @param jobId    - Optional: existing GenerationJob ID for usage tracking
+     */
+    async runStage(novelId, stage, isRetry = false, jobId) {
         const novel = await db.novel.findUnique({ where: { id: novelId } });
         if (!novel)
-            throw new Error("Novel not found");
+            throw new Error('Novel not found');
         const handler = this.handlers.get(stage);
         if (!handler)
             throw new Error(`No handler for stage: ${stage}`);
-        const job = await db.generationJob.create({
-            data: {
-                novelId,
-                stage,
-                status: 'RUNNING',
-                provider: 'LLMProvider',
-                startedAt: new Date()
-            }
-        });
         const originalProvider = handler.provider;
-        handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, stage, undefined, job.id);
+        // Wrap with usage proxy if we have a jobId
+        if (jobId) {
+            handler.provider = new LLMUsageProxy(originalProvider, originalProvider.getProviderName(), novelId, stage, undefined, jobId);
+        }
         try {
             const prompt = await handler.prepareInput(novelId);
             const fullPrompt = `${prompt}\nSTAGE: ${stage}`;
@@ -76,18 +80,7 @@ export class ArchitectManager {
                     });
                 }
             });
-            await db.generationJob.update({
-                where: { id: job.id },
-                data: { status: 'SUCCEEDED', output: data, completedAt: new Date() }
-            });
             return data;
-        }
-        catch (e) {
-            await db.generationJob.update({
-                where: { id: job.id },
-                data: { status: 'FAILED', error: { message: e.message }, completedAt: new Date() }
-            });
-            throw e;
         }
         finally {
             handler.provider = originalProvider;

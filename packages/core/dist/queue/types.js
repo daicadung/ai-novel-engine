@@ -13,9 +13,12 @@ export var QueueName;
 export var JobStatus;
 (function (JobStatus) {
     JobStatus["QUEUED"] = "QUEUED";
+    JobStatus["CLAIMED"] = "CLAIMED";
     JobStatus["RUNNING"] = "RUNNING";
     JobStatus["COMPLETED"] = "COMPLETED";
     JobStatus["FAILED"] = "FAILED";
     JobStatus["PAUSED"] = "PAUSED";
     JobStatus["CANCELLED"] = "CANCELLED";
+    JobStatus["RETRY_PENDING"] = "RETRY_PENDING";
+    JobStatus["BLOCKED"] = "BLOCKED";
 })(JobStatus || (JobStatus = {}));
