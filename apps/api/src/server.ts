@@ -22,6 +22,8 @@ import sceneRoutes from './routes/scene.js';
 import proseRoutes from './routes/prose.js';
 import { internalRoutes } from './routes/internal.js';
 import { generationRoutes } from './routes/generation.js';
+import { qualityRoutes } from './routes/quality.js';
+import { planningRoutes } from './routes/planning.js';
 
 import { NotFoundError, ValidationError } from "./errors/index.js";
 
@@ -69,6 +71,8 @@ await app.register(sceneRoutes, { prefix: '/api/scene' });
 await app.register(proseRoutes, { prefix: '/api/prose' });
 await app.register(internalRoutes, { prefix: '/api/internal' });
 await app.register(generationRoutes, { prefix: '/api' });
+await app.register(qualityRoutes, { prefix: '/api' });
+await app.register(planningRoutes, { prefix: '/api' });
 
 export { app };
 

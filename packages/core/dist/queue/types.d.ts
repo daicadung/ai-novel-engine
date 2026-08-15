@@ -3,7 +3,9 @@ export declare enum JobType {
     PLANNER_STAGE = "PLANNER_STAGE",
     SCENE_GENERATION = "SCENE_GENERATION",
     PROSE_GENERATION = "PROSE_GENERATION",
-    PROSE_REVISION = "PROSE_REVISION"
+    PROSE_REVISION = "PROSE_REVISION",
+    QUALITY_REPAIR = "QUALITY_REPAIR",
+    STORY_PLANNING = "STORY_PLANNING"
 }
 export declare enum QueueName {
     GENERATION_QUEUE = "generation_queue"
@@ -31,7 +33,25 @@ export interface ProseJobPayload extends BaseJobPayload {
     previousSnapshotId?: string;
     isRetry?: boolean;
 }
-export type JobPayload = ArchitectJobPayload | PlannerJobPayload | SceneJobPayload | ProseJobPayload;
+export interface QualityRepairJobPayload extends BaseJobPayload {
+    chapterId: string;
+    chapterProseVersionId: string;
+    repairPlanId: string;
+    strategy: string;
+    issueIds: string[];
+    attemptNumber: number;
+    isRetry?: boolean;
+}
+export interface StoryPlanningJobPayload extends BaseJobPayload {
+    /** Sub-operation: initial | arc_plan | chapter_objectives | replan | reconcile | milestone_recovery */
+    operation: 'initial' | 'arc_plan' | 'chapter_objectives' | 'replan' | 'reconcile' | 'milestone_recovery';
+    longHorizonPlanId?: string;
+    arcPlanId?: string;
+    chapterNumber?: number;
+    chapterObjectiveId?: string;
+    isRetry?: boolean;
+}
+export type JobPayload = ArchitectJobPayload | PlannerJobPayload | SceneJobPayload | ProseJobPayload | QualityRepairJobPayload | StoryPlanningJobPayload;
 export interface JobOptions {
     jobId?: string;
     attempts?: number;

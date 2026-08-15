@@ -3,8 +3,13 @@ import { LLMProvider } from '../architect/llm.js';
 import { ProseStageHandler } from './handlers.js';
 import { ProseContextBuilder } from './context.js';
 import { ProviderFactory } from '../llm/factory.js';
-import { ProseStatus } from '@prisma/client';
+import { ProseStatus, JobType } from '@ane/core';
 import { LLMUsageProxy } from '../generation/LLMUsageProxy.js';
+import { ChapterMemoryManager } from '../continuity/ChapterMemoryManager.js';
+import { DatabaseQueueManager } from '../queue/DatabaseQueueManager.js';
+import { GenerationQualityGate } from '../continuity/GenerationQualityGate.js';
+import { PlotThreadManager } from '../continuity/PlotThreadManager.js';
+import { QualityOrchestrator } from '../quality/QualityOrchestrator.js';
 
 export class ProseManager {
   private provider: LLMProvider;
@@ -19,6 +24,12 @@ export class ProseManager {
    * Core prose generation logic.
    * NOTE: Job creation is NOT done here — it is the responsibility of DatabaseQueueManager.
    * This method only executes the domain operation for an already-existing job.
+   *
+   * Phase 9 additions:
+   * - Runs GenerationQualityGate before canonical promotion
+   * - Creates ChapterMemory after successful promotion
+   * - Promotes StoryState with extracted deltas
+   * - Handles BLOCK recommendation (throws, causing job to become RETRY_PENDING/BLOCKED)
    *
    * @param novelId     - The novel being processed
    * @param chapterId   - The chapter being processed
@@ -66,6 +77,7 @@ export class ProseManager {
 
     try {
       const generatedScenes: any[] = [];
+      const allProseText: string[] = [];
 
       const maxRevisions = parseInt(process.env.MAX_REVISION_RETRIES || '3', 10);
 
@@ -85,6 +97,7 @@ export class ProseManager {
         );
 
         const result = await this.handler.invokeWithRetries(context, scene, maxRevisions);
+        allProseText.push(result.content);
         generatedScenes.push({
           sceneId: scene.id,
           content: result.content,
@@ -94,7 +107,17 @@ export class ProseManager {
         });
       }
 
-      // Transactional canonical promotion
+      // ----------------------------------------------------------------
+      // Phase 9: Extract state deltas from canonical scene plan
+      // ----------------------------------------------------------------
+      const stateDeltas = await ChapterMemoryManager.extractStateDeltas(chapterId);
+
+      // ----------------------------------------------------------------
+      // Phase 9: Run quality gate BEFORE canonical promotion
+      // ----------------------------------------------------------------
+      let newVersionId: string | null = null;
+
+      // Transactional canonical promotion (unchanged from before)
       await db.$transaction(async (tx) => {
         // Fetch or create ChapterProse
         let chapterProse = await tx.chapterProse.findUnique({ where: { chapterId } });
@@ -118,6 +141,8 @@ export class ProseManager {
             provider: originalProvider.getProviderName(),
           }
         });
+
+        newVersionId = newVersion.id;
 
         for (const gen of generatedScenes) {
           await tx.sceneProse.create({
@@ -150,6 +175,116 @@ export class ProseManager {
           data: { currentVersionId: newVersion.id }
         });
       });
+
+      // ----------------------------------------------------------------
+      // Phase 9: Quality gate (runs AFTER write, before state promotion)
+      // Non-blocking in WARN mode — blocks in FAIL mode
+      // ----------------------------------------------------------------
+      if (newVersionId) {
+        const gateReport = await GenerationQualityGate.runGate(
+          novelId,
+          chapterId,
+          newVersionId,
+          {
+            proposedDeltas: stateDeltas,
+            proseText: allProseText.join('\n'),
+            chapterNumber: chapter.number,
+          }
+        );
+
+        if (gateReport.recommendation === 'BLOCK') {
+          // Mark the prose version as STALE (it's been written but blocked from being current)
+          await db.chapterProseVersion.update({
+            where: { id: newVersionId },
+            data: { status: ProseStatus.STALE }
+          });
+          await db.chapterProse.update({
+            where: { chapterId },
+            data: { currentVersionId: null }
+          });
+          throw new Error(
+            `Quality gate BLOCKED promotion for chapter ${chapter.number}: ${gateReport.conflicts
+              .filter((c) => c.severity === 'ERROR')
+              .map((c) => c.description)
+              .join('; ')}`
+          );
+        }
+        // WARN or PASS: continue to state promotion
+      }
+
+      // ----------------------------------------------------------------
+      // Phase 9: Promote StoryState with chapter's deltas
+      // ----------------------------------------------------------------
+      if (stateDeltas.length > 0) {
+        await ChapterMemoryManager.promoteStoryState(
+          novelId,
+          chapter.number,
+          stateDeltas,
+        ).catch((err) => {
+          // Non-fatal — story state promotion failure should not block prose
+          console.error('[ProseManager] Story state promotion failed:', err);
+        });
+      }
+
+      // ----------------------------------------------------------------
+      // Phase 9: Create chapter memory
+      // ----------------------------------------------------------------
+      await ChapterMemoryManager.createMemory(
+        novelId,
+        chapterId,
+        chapter.number,
+        stateDeltas,
+        `Chapter ${chapter.number}${chapter.title ? `: ${chapter.title}` : ''} — ${generatedScenes.length} scenes generated`,
+        {
+          locations: scenePlanVersion.scenes.map((s) => s.location).filter(Boolean) as string[],
+          keyEvents: generatedScenes.slice(0, 10).map((_, i) => `Scene ${i + 1} completed`),
+        }
+      ).catch((err) => {
+        // Non-fatal
+        console.error('[ProseManager] Chapter memory creation failed:', err);
+      });
+
+      // ----------------------------------------------------------------
+      // Phase 9: Update plot thread statuses from state deltas
+      // ----------------------------------------------------------------
+      await PlotThreadManager.updateFromDeltas(novelId, stateDeltas).catch(() => {});
+
+      // ----------------------------------------------------------------
+      // Phase 10: Quality analysis (non-fatal, fully async-safe)
+      // Runs AFTER canonical promotion and all Phase 9 steps
+      // NEVER modifies canonical state
+      // ----------------------------------------------------------------
+      const totalWordCount = generatedScenes.reduce(
+        (acc, s) => acc + (s.wordCount ?? 0),
+        0
+      );
+      const qualityOrchestrator = new QualityOrchestrator();
+      await qualityOrchestrator.analyze(novelId, chapterId, chapter.number, {
+        chapterProseVersionId: newVersionId ?? undefined,
+        stateDeltas,
+        wordCount: totalWordCount,
+        sceneCount: generatedScenes.length,
+        jobId,
+      }).catch((err) => {
+        // Non-fatal — quality analysis must never block canonical generation
+        console.error('[ProseManager] Phase 10 quality analysis failed (non-fatal):', err);
+      });
+
+      // ----------------------------------------------------------------
+      // Phase 12: Enqueue Causality Analysis (non-fatal, fully async-safe)
+      // Runs AFTER canonical promotion
+      // ----------------------------------------------------------------
+      const queueManager = new DatabaseQueueManager();
+      await queueManager.addJob(JobType.CAUSALITY_ANALYSIS, {
+        novelId,
+        chapterId,
+        chapterNumber: chapter.number,
+      }, {
+        jobId: `causality-${chapterId}`, // Idempotent key
+      }).catch((err) => {
+        console.error('[ProseManager] Failed to enqueue causality analysis:', err);
+      });
+
     } finally {
       // Always restore original provider — even if generation failed
       this.handler.provider = originalProvider;

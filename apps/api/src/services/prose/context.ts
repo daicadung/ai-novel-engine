@@ -25,6 +25,22 @@ export class ProseContextBuilder {
 
     if (!scene) throw new Error("Missing scene plan");
 
+    // 2.5 Load Chapter Objective (Phase 11)
+    const objectiveRecord = await db.chapterObjectiveRecord.findFirst({
+      where: { novelId, chapterNumber: chapter.number },
+      orderBy: { createdAt: 'desc' }
+    });
+    let objectiveText = '';
+    if (objectiveRecord) {
+      objectiveText = `
+      PHASE 11 - LONG HORIZON OBJECTIVE:
+      Primary: ${objectiveRecord.primaryObjective}
+      Required Events: ${(objectiveRecord.requiredEvents as string[] || []).join(', ')}
+      Forbidden Events: ${(objectiveRecord.forbiddenEvents as string[] || []).join(', ')}
+      Secondary Objectives: ${(objectiveRecord.secondaryObjectives as string[] || []).join(', ')}
+      `;
+    }
+
     // 3. Load Continuity State
     let snapshotText = "Empty Continuity State";
     if (previousSnapshotId) {
@@ -48,6 +64,7 @@ export class ProseContextBuilder {
       OBJECTIVE: ${scene.objective}
       OUTCOME: ${scene.outcome}
       CONTINUITY: ${snapshotText}
+      ${objectiveText}
     `;
   }
 }

@@ -5,6 +5,8 @@ export var JobType;
     JobType["SCENE_GENERATION"] = "SCENE_GENERATION";
     JobType["PROSE_GENERATION"] = "PROSE_GENERATION";
     JobType["PROSE_REVISION"] = "PROSE_REVISION";
+    JobType["QUALITY_REPAIR"] = "QUALITY_REPAIR";
+    JobType["STORY_PLANNING"] = "STORY_PLANNING";
 })(JobType || (JobType = {}));
 export var QueueName;
 (function (QueueName) {

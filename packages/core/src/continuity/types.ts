@@ -9,7 +9,7 @@ export const CharacterStateSchema = z.object({
   name: z.string(),
   isAlive: z.boolean().default(true),
   location: z.string().optional(),
-  physicalState: z.record(z.string()).optional(), // injuries, enhancements, etc.
+  physicalState: z.record(z.string(), z.string()).optional(),
   abilities: z.array(z.string()).optional(),
   possessions: z.array(z.string()).optional(),
   emotionalState: z.string().optional(),
@@ -80,41 +80,47 @@ export const SecretSchema = z.object({
 });
 
 // ====================================================================
-// Story State — the canonical "what is true now" representation
+// Story State
 // ====================================================================
+
+const RelationshipEntrySchema = z.object({
+  sourceId: z.string(),
+  targetId: z.string(),
+  type: z.string(),
+  dynamic: z.string().optional(),
+  tension: z.string().optional(),
+  lastChapter: z.number().optional(),
+});
+
+const AbilityEntrySchema = z.object({
+  ownerId: z.string(),
+  name: z.string(),
+  level: z.string().optional(),
+  limitations: z.array(z.string()).optional(),
+});
+
+const TimelineEntrySchema = z.object({
+  event: z.string(),
+  chapter: z.number(),
+  isPublicKnowledge: z.boolean().default(false),
+});
 
 export const StoryStateSchema = z.object({
   novelId: z.string(),
   asOfChapter: z.number(),
   snapshotId: z.string().optional(),
 
-  characters: z.record(CharacterStateSchema).default({}),
-  relationships: z.record(z.object({
-    sourceId: z.string(),
-    targetId: z.string(),
-    type: z.string(),
-    dynamic: z.string().optional(),
-    tension: z.string().optional(),
-    lastChapter: z.number().optional(),
-  })).default({}),
-  locations: z.record(LocationStateSchema).default({}),
-  items: z.record(ItemStateSchema).default({}),
-  abilities: z.record(z.object({
-    ownerId: z.string(),
-    name: z.string(),
-    level: z.string().optional(),
-    limitations: z.array(z.string()).optional(),
-  })).default({}),
-  factions: z.record(FactionStateSchema).default({}),
-  mysteries: z.record(SecretSchema).default({}),
-  quests: z.record(PlotThreadStateSchema).default({}),
-  worldFacts: z.record(WorldFactSchema).default({}),
-  timeline: z.record(z.object({
-    event: z.string(),
-    chapter: z.number(),
-    isPublicKnowledge: z.boolean().default(false),
-  })).default({}),
-  customEntities: z.record(z.unknown()).default({}),
+  characters: z.record(z.string(), CharacterStateSchema).default({}),
+  relationships: z.record(z.string(), RelationshipEntrySchema).default({}),
+  locations: z.record(z.string(), LocationStateSchema).default({}),
+  items: z.record(z.string(), ItemStateSchema).default({}),
+  abilities: z.record(z.string(), AbilityEntrySchema).default({}),
+  factions: z.record(z.string(), FactionStateSchema).default({}),
+  mysteries: z.record(z.string(), SecretSchema).default({}),
+  quests: z.record(z.string(), PlotThreadStateSchema).default({}),
+  worldFacts: z.record(z.string(), WorldFactSchema).default({}),
+  timeline: z.record(z.string(), TimelineEntrySchema).default({}),
+  customEntities: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type StoryState = z.infer<typeof StoryStateSchema>;
@@ -127,7 +133,7 @@ export type WorldFact = z.infer<typeof WorldFactSchema>;
 export type Secret = z.infer<typeof SecretSchema>;
 
 // ====================================================================
-// State Delta — typed state change with provenance
+// State Delta
 // ====================================================================
 
 export enum EntityTypeEnum {
@@ -156,7 +162,7 @@ export interface StateDelta {
 }
 
 // ====================================================================
-// Chapter Memory — compact structured chapter summary
+// Chapter Memory
 // ====================================================================
 
 export const ChapterMemorySchema = z.object({
@@ -186,27 +192,27 @@ export const ChapterMemorySchema = z.object({
 export type ChapterMemory = z.infer<typeof ChapterMemorySchema>;
 
 // ====================================================================
-// Knowledge State — per-character knowledge model
+// Knowledge State
 // ====================================================================
 
 export const KnowledgeStateSchema = z.object({
   characterId: z.string(),
   characterName: z.string(),
   knownFacts: z.array(z.string()),
-  knownEntities: z.record(z.object({
+  knownEntities: z.record(z.string(), z.object({
     entityId: z.string(),
     knownAs: z.string(),
     relationship: z.string().optional(),
-    beliefs: z.record(z.string()).optional(),
+    beliefs: z.record(z.string(), z.string()).optional(),
   })),
   knownSecrets: z.array(z.string()),
-  beliefs: z.record(z.string()),
+  beliefs: z.record(z.string(), z.string()),
   misconceptions: z.array(z.object({
     belief: z.string(),
     truth: z.string(),
     introducedChapter: z.number().optional(),
   })),
-  discoveredAtChapter: z.record(z.number()),
+  discoveredAtChapter: z.record(z.string(), z.number()),
   lastUpdatedChapter: z.number(),
 });
 
@@ -233,9 +239,9 @@ export enum ContinuityConflictType {
 }
 
 export enum ConflictSeverity {
-  ERROR = 'ERROR',   // Block canonical promotion
-  WARNING = 'WARNING', // Allow with review flag
-  INFO = 'INFO',     // Log only
+  ERROR = 'ERROR',
+  WARNING = 'WARNING',
+  INFO = 'INFO',
 }
 
 export interface ContinuityConflict {
@@ -260,7 +266,7 @@ export interface ContinuityValidationReport {
 }
 
 // ====================================================================
-// Continuity Window (what LLM receives)
+// Continuity Window
 // ====================================================================
 
 export interface ContinuityWindowConfig {
@@ -287,7 +293,7 @@ export interface ContinuityWindow {
 }
 
 // ====================================================================
-// Generation Quality Gate types
+// Quality Gate types
 // ====================================================================
 
 export enum QualityGateResult {

@@ -6,3 +6,6 @@ export * from './llm/index.js';
 export * from './queue/index.js';
 export * from './generation/index.js';
 export * from './continuity/index.js';
+export * from './quality/index.js';
+export * from './planning/index.js';
+export * from './causality/types.js';
