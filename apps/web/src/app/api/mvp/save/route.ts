@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase.from(table).insert(rows);
     if (error) {
       await supabase.from('novels').delete().eq('id', novelId);
-      return NextResponse.json({ status: 'error', table, message: error.message }, { status: 500 });
+      return NextResponse.redirect(new URL(`/mvp?error=${encodeURIComponent(`${table}: ${error.message}`)}`, request.url), 303);
     }
   }
 

@@ -19,6 +19,7 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
   const params = await searchParams;
   const title = valueOfParam(params.title, 'Ta La Kiem De').trim() || 'Ta La Kiem De';
   const chapterCount = numberParam(params.chapters, 50);
+  const error = valueOfParam(params.error, '');
   const result = generateMvpNovel(title, { chapterCount });
   const payloads = mapMvpNovelToPersistence(result, {
     ownerId: '00000000-0000-4000-8000-000000000001',
@@ -62,6 +63,9 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
               Save to Supabase
             </button>
           </form>
+          {error ? (
+            <p className="text-sm text-red-700">{error}</p>
+          ) : null}
         </header>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
