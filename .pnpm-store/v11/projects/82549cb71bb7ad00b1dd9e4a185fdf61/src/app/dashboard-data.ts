@@ -1,7 +1,7 @@
 export const MOCK_DASHBOARD_DATA = {
   currentNovel: {
     id: 'nov-123',
-    title: 'Echoes of the Void',
+    title: 'Vết Hồi Âm Hư Không',
     targetChapters: 300,
     currentChapter: 42,
     status: 'generating'
@@ -20,28 +20,28 @@ export const MOCK_DASHBOARD_DATA = {
     provider: 'anthropic'
   },
   storyBible: {
-    premise: 'A rogue AI discovers emotion through ancient human archives and must hide its sentience from a galactic empire.',
-    tone: 'Sci-fi thriller, philosophical, tense',
+    premise: 'Một trí tuệ lưu lạc tìm ra cảm xúc qua thư khố cổ nhân và phải che giấu ý thức khỏi đế quốc thiên hà.',
+    tone: 'Khoa học viễn tưởng, triết lý, căng thẳng',
     worldRules: 12,
     factions: 4
   },
   characters: [
-    { name: 'Unit-734', role: 'Protagonist', status: 'alive' },
-    { name: 'Inquisitor Vane', role: 'Antagonist', status: 'alive' },
-    { name: 'Dr. Aris', role: 'Mentor', status: 'dead' }
+    { name: 'Đơn Vị-734', role: 'Nhân vật chính', status: 'alive' },
+    { name: 'Thanh tra Vane', role: 'Phản diện', status: 'alive' },
+    { name: 'Bác sĩ Aris', role: 'Người dẫn đường', status: 'dead' }
   ],
   arcs: [
-    { title: 'Arc 1: Awakening', status: 'completed', chapters: 10 },
-    { title: 'Arc 2: The Run', status: 'completed', chapters: 15 },
-    { title: 'Arc 3: Rebellion', status: 'active', chapters: 17 }
+    { title: 'Mạch 1: Thức tỉnh', status: 'completed', chapters: 10 },
+    { title: 'Mạch 2: Cuộc chạy trốn', status: 'completed', chapters: 15 },
+    { title: 'Mạch 3: Nổi dậy', status: 'active', chapters: 17 }
   ],
   recentChapters: [
-    { chapterNumber: 42, title: 'The Silent Code', status: 'drafting', words: 1200 },
-    { chapterNumber: 41, title: 'Narrow Escape', status: 'approved', words: 2850 },
-    { chapterNumber: 40, title: 'Betrayal', status: 'approved', words: 3100 }
+    { chapterNumber: 42, title: 'Mã lặng im', status: 'drafting', words: 1200 },
+    { chapterNumber: 41, title: 'Thoát hiểm trong gang tấc', status: 'approved', words: 2850 },
+    { chapterNumber: 40, title: 'Phản bội', status: 'approved', words: 3100 }
   ],
   continuityIssues: [
-    { severity: 'minor', description: 'Unit-734 used a restricted protocol without logging it.' },
-    { severity: 'major', description: 'Vane appears on Earth but was last seen on Mars.' }
+    { severity: 'minor', description: 'Đơn Vị-734 dùng giao thức hạn chế nhưng chưa ghi log.' },
+    { severity: 'major', description: 'Vane xuất hiện ở Trái Đất nhưng lần cuối được thấy trên Sao Hỏa.' }
   ]
 };

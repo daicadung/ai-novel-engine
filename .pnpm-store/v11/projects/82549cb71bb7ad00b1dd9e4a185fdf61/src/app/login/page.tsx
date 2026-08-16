@@ -53,8 +53,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6 text-zinc-950">
       <form className="flex w-full max-w-md flex-col gap-3 border border-zinc-200 bg-white p-6" action={login}>
         <div>
-          <p className="text-sm font-medium text-blue-700">AI Novel Engine</p>
-          <h1 className="mt-1 text-2xl font-semibold">Sign in</h1>
+          <p className="text-sm font-medium text-blue-700">Máy tạo truyện AI</p>
+          <h1 className="mt-1 text-2xl font-semibold">Đăng nhập</h1>
         </div>
         {message ? (
           <p className="border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">{message}</p>
@@ -79,10 +79,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
           required
         />
         <button className="bg-green-700 px-4 py-2 text-white">
-          Sign In
+          Đăng nhập
         </button>
         <button className="border border-zinc-300 px-4 py-2 text-zinc-900" formAction={signup}>
-          Create Account
+          Tạo tài khoản
         </button>
       </form>
     </main>

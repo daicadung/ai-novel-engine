@@ -21,12 +21,12 @@ describe('Phase 9 Dashboard Scope Constraints', () => {
   });
 
   it('includes expected domain labels in the dashboard', () => {
-    expect(pageContent).toContain('Story Bible');
-    expect(pageContent).toContain('Continuity');
-    expect(pageContent).toContain('Arcs');
-    expect(pageContent).toContain('Chapters');
-    expect(pageContent).toContain('Cost');
-    expect(pageContent).toContain('Generation Pipeline');
+    expect(pageContent).toContain('Hồ sơ truyện');
+    expect(pageContent).toContain('Logic');
+    expect(pageContent).toContain('Mạch truyện');
+    expect(pageContent).toContain('Chương');
+    expect(pageContent).toContain('Chi phí');
+    expect(pageContent).toContain('Luồng tạo truyện');
   });
 
   it('includes a title-only MVP generator entrypoint', () => {
