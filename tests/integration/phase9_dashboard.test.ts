@@ -4,10 +4,13 @@ import * as path from 'path';
 
 describe('Phase 9 Dashboard Scope Constraints', () => {
   const pagePath = path.join(__dirname, '../../apps/web/src/app/page.tsx');
+  const mvpPath = path.join(__dirname, '../../apps/web/src/app/mvp/page.tsx');
   const dataPath = path.join(__dirname, '../../apps/web/src/app/dashboard-data.ts');
   const pageContent = fs.existsSync(pagePath) ? fs.readFileSync(pagePath, 'utf8') : '';
+  const mvpContent = fs.existsSync(mvpPath) ? fs.readFileSync(mvpPath, 'utf8') : '';
   const dashboardContent = [
     pageContent,
+    mvpContent,
     fs.existsSync(dataPath) ? fs.readFileSync(dataPath, 'utf8') : '',
   ].join('\n');
 
@@ -24,6 +27,13 @@ describe('Phase 9 Dashboard Scope Constraints', () => {
     expect(pageContent).toContain('Chapters');
     expect(pageContent).toContain('Cost');
     expect(pageContent).toContain('Generation Pipeline');
+  });
+
+  it('includes a title-only MVP generator entrypoint', () => {
+    expect(mvpContent).toContain('generateMvpNovel');
+    expect(mvpContent).toContain('Novel title');
+    expect(mvpContent).toContain('Chapter count');
+    expect(mvpContent).toContain('Continuity');
   });
 
   it('does not contain unauthorized imports or network calls', () => {
