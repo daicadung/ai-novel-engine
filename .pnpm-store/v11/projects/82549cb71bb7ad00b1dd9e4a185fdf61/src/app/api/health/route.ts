@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
   let env;
   try {
     env = getEnv()
-  } catch {
+  } catch (err) {
     const response = NextResponse.json({
       status: 'degraded',
-      message: 'Environment configuration missing',
+      message: err instanceof Error ? err.message : 'Environment configuration missing',
       dbStatus: 'down',
       env: {
         SUPABASE_URL_CONFIGURED: false,

@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { MOCK_DASHBOARD_DATA } from './dashboard-data';
 
 export default function Dashboard() {
@@ -20,9 +21,9 @@ export default function Dashboard() {
             <option>{data.currentNovel.title}</option>
             <option>Create New Novel...</option>
           </select>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors">
+          <Link className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors" href="/mvp">
             Generate Next
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -84,7 +85,7 @@ export default function Dashboard() {
             <section className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Story Bible</h2>
-                <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline">Edit</button>
+                <Link className="text-xs text-blue-600 dark:text-blue-400 hover:underline" href="/mvp">Edit</Link>
               </div>
               <p className="text-sm italic mb-3 text-zinc-700 dark:text-zinc-300">&quot;{data.storyBible.premise}&quot;</p>
               <div className="text-xs space-y-1 text-zinc-600 dark:text-zinc-400">
@@ -172,8 +173,8 @@ export default function Dashboard() {
                   <div className="flex-1">
                      <p className="text-sm">{issue.description}</p>
                      <div className="mt-2 flex gap-2">
-                       <button className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline">Repair Prompt</button>
-                       <button className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">Dismiss</button>
+                       <Link className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline" href="/mvp">Repair Prompt</Link>
+                       <Link className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" href="/api/health">Health</Link>
                      </div>
                   </div>
                 </div>
