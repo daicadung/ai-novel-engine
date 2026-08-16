@@ -28,29 +28,34 @@ export function parseConceptCandidates(jsonText: string): { candidates: ConceptC
   const candidates: ConceptCandidate[] = [];
 
   for (let i = 0; i < parsed.candidates.length; i++) {
-    const item = parsed.candidates[i];
-    if (!isPlainObject(item)) {
+    const raw = parsed.candidates[i] as Record<string, unknown>;
+    if (!isPlainObject(raw)) {
       throw new Error(`Candidate ${i} is not an object`);
     }
-    if (typeof item.title !== 'string') {
-      throw new Error(`Candidate ${i} is missing required string field: "title"`);
+
+    // Normalize field names: LLMs often use 'name'/'concept' instead of 'title'/'premise'
+    const titleVal = (raw.title ?? raw.name ?? raw.novel_title ?? '') as string;
+    const premiseVal = (raw.premise ?? raw.concept ?? raw.description ?? raw.summary ?? '') as string;
+
+    if (!titleVal) {
+      throw new Error(`Candidate ${i} is missing a title (tried: title, name, novel_title)`);
     }
-    if (typeof item.premise !== 'string') {
-      throw new Error(`Candidate ${i} is missing required string field: "premise"`);
+    if (!premiseVal) {
+      throw new Error(`Candidate ${i} is missing a premise (tried: premise, concept, description, summary)`);
     }
 
     candidates.push({
-      title: item.title,
-      premise: item.premise,
-      genre: typeof item.genre === 'string' ? item.genre : undefined,
-      setting: typeof item.setting === 'string' ? item.setting : undefined,
-      protagonist_archetype: typeof item.protagonist_archetype === 'string' ? item.protagonist_archetype : undefined,
-      theme: typeof item.theme === 'string' ? item.theme : undefined,
-      conflict: typeof item.conflict === 'string' ? item.conflict : undefined,
-      progression_model: typeof item.progression_model === 'string' ? item.progression_model : undefined,
-      power_system: typeof item.power_system === 'string' ? item.power_system : undefined,
-      narrative_structure: typeof item.narrative_structure === 'string' ? item.narrative_structure : undefined,
-      ending_direction: typeof item.ending_direction === 'string' ? item.ending_direction : undefined,
+      title: String(titleVal),
+      premise: String(premiseVal),
+      genre: typeof raw.genre === 'string' ? raw.genre : undefined,
+      setting: typeof raw.setting === 'string' ? raw.setting : undefined,
+      protagonist_archetype: typeof raw.protagonist_archetype === 'string' ? raw.protagonist_archetype : (typeof raw.protagonist === 'string' ? raw.protagonist : undefined),
+      theme: typeof raw.theme === 'string' ? raw.theme : undefined,
+      conflict: typeof raw.conflict === 'string' ? raw.conflict : undefined,
+      progression_model: typeof raw.progression_model === 'string' ? raw.progression_model : undefined,
+      power_system: typeof raw.power_system === 'string' ? raw.power_system : undefined,
+      narrative_structure: typeof raw.narrative_structure === 'string' ? raw.narrative_structure : undefined,
+      ending_direction: typeof raw.ending_direction === 'string' ? raw.ending_direction : undefined,
     });
   }
 

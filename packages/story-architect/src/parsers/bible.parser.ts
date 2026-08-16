@@ -41,6 +41,25 @@ function expectStringArray(obj: Record<string, unknown>, key: string, path: stri
   return arr as string[];
 }
 
+function safeString(obj: Record<string, unknown>, key: string, fallback = ''): string {
+  return typeof obj[key] === 'string' ? obj[key] as string : fallback;
+}
+
+function safeObject(obj: Record<string, unknown>, key: string): Record<string, unknown> {
+  return isPlainObject(obj[key]) ? obj[key] as Record<string, unknown> : {};
+}
+
+function safeStringArray(obj: Record<string, unknown>, key: string): string[] {
+  if (!Array.isArray(obj[key])) return [];
+  return (obj[key] as unknown[]).filter(x => typeof x === 'string') as string[];
+}
+
+function safeArray(obj: Record<string, unknown>, key: string): unknown[] {
+  return Array.isArray(obj[key]) ? obj[key] as unknown[] : [];
+}
+
+
+
 export function parseStoryBibleDraft(jsonText: string): StoryBibleDraft {
   let parsed: unknown;
   try {
