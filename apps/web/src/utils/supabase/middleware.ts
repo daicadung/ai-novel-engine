@@ -7,7 +7,17 @@ export async function updateSession(request: NextRequest) {
     request,
   })
   
-  const env = getEnv()
+  let env;
+  try {
+    env = getEnv()
+  } catch (_error) {
+    if (request.nextUrl.pathname.startsWith('/protected')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,

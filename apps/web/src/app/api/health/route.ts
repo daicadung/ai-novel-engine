@@ -6,8 +6,25 @@ export async function GET(request: NextRequest) {
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID()
   logger.info('Health check requested', { requestId })
 
+  let env;
   try {
-    const env = getEnv()
+    env = getEnv()
+  } catch (_err) {
+    const response = NextResponse.json({
+      status: 'degraded',
+      message: 'Environment configuration missing',
+      dbStatus: 'down',
+      env: {
+        SUPABASE_URL_CONFIGURED: false,
+        SUPABASE_PUBKEY_CONFIGURED: false,
+        SERVICE_KEY_CONFIGURED: false,
+      }
+    }, { status: 200 })
+    response.headers.set('x-request-id', requestId)
+    return response
+  }
+
+  try {
     const supabase = await createClient()
 
     // Test DB connection

@@ -3,6 +3,7 @@ import { Client } from 'pg'
 
 describe('Migration & Schema Validation', () => {
   let client: Client
+  let dbConnected = false
 
   beforeAll(async () => {
     // In CI this connects to the isolated test database where the migration ran
@@ -12,9 +13,9 @@ describe('Migration & Schema Validation', () => {
     // Test fails cleanly if we can't connect, verifying external DB integration is set up
     try {
       await client.connect()
+      dbConnected = true
     } catch (e) {
       console.warn('Skipping migration tests: Could not connect to Postgres database.')
-      return
     }
   })
 
@@ -24,8 +25,8 @@ describe('Migration & Schema Validation', () => {
     }
   })
 
-  it('verifies required extensions are enabled', async () => {
-    if (!client?._connected) return
+  it('verifies required extensions are enabled', async (ctx) => {
+    if (!dbConnected) return ctx.skip()
 
     const { rows } = await client.query(`
       SELECT extname FROM pg_extension WHERE extname IN ('pgcrypto', 'vector');
@@ -35,8 +36,8 @@ describe('Migration & Schema Validation', () => {
     expect(extensions).toContain('vector')
   })
 
-  it('verifies profiles and workspace_items tables exist with RLS', async () => {
-    if (!client?._connected) return
+  it('verifies profiles and workspace_items tables exist with RLS', async (ctx) => {
+    if (!dbConnected) return ctx.skip()
 
     const { rows: tables } = await client.query(`
       SELECT relname, relrowsecurity 
@@ -52,8 +53,8 @@ describe('Migration & Schema Validation', () => {
     expect(workspaceItems.relrowsecurity).toBe(true)
   })
 
-  it('verifies handle_new_user trigger exists', async () => {
-    if (!client?._connected) return
+  it('verifies handle_new_user trigger exists', async (ctx) => {
+    if (!dbConnected) return ctx.skip()
 
     const { rows: triggers } = await client.query(`
       SELECT trigger_name 
