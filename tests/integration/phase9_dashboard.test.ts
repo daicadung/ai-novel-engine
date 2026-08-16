@@ -31,9 +31,10 @@ describe('Phase 9 Dashboard Scope Constraints', () => {
 
   it('includes a title-only MVP generator entrypoint', () => {
     expect(mvpContent).toContain('generateMvpNovel');
-    expect(mvpContent).toContain('Novel title');
-    expect(mvpContent).toContain('Chapter count');
-    expect(mvpContent).toContain('Continuity');
+    expect(mvpContent).toContain('Tên truyện');
+    expect(mvpContent).toContain('Số chương');
+    expect(mvpContent).toContain('Logic truyện');
+    expect(mvpContent).toContain('Toàn bộ chương đã tạo');
   });
 
   it('does not contain unauthorized imports or network calls', () => {

@@ -83,17 +83,17 @@ export function generateMvpNovel(title: string, options: MvpPipelineOptions = {}
 
 function buildConcept(title: string): ConceptCandidate {
   return {
-    title: `${title}: Broken Origin`,
-    premise: `${title} follows a fallen heir rebuilding power through a forbidden legacy.`,
+    title: `${title}: Khởi Nguyên Tan Vỡ`,
+    premise: `${title} kể về một thiếu niên bị tước vị, từng bước khôi phục sức mạnh bằng di sản cấm.`,
     genre: 'xianxia',
-    setting: 'fractured cultivation empire',
-    protagonist_archetype: 'fallen genius',
-    theme: 'identity through earned strength',
-    conflict: 'sect politics and ancient debt',
-    progression_model: 'weak-to-strong',
-    power_system: 'sword cultivation',
-    narrative_structure: 'long-form progression',
-    ending_direction: 'ascension with personal cost'
+    setting: 'đế quốc tu luyện chia rạn',
+    protagonist_archetype: 'thiên tài sa cơ',
+    theme: 'tìm lại bản ngã qua sức mạnh tự giành lấy',
+    conflict: 'tranh quyền tông môn và món nợ cổ xưa',
+    progression_model: 'từ yếu đến mạnh',
+    power_system: 'kiếm tu',
+    narrative_structure: 'trường thiên tiến cấp',
+    ending_direction: 'đăng đỉnh nhưng phải trả giá'
   };
 }
 
@@ -106,7 +106,7 @@ function buildDna(concept: ConceptCandidate): StoryDna {
     faction_dna: { conflict: concept.conflict },
     plot_dna: { progression: concept.progression_model },
     arc_dna: { structure: concept.narrative_structure },
-    event_dna: { opening: 'exile' },
+    event_dna: { opening: 'lưu đày' },
     ending_dna: { direction: concept.ending_direction }
   };
 }
@@ -116,54 +116,54 @@ function buildBible(title: string, concept: ConceptCandidate, language: string):
     bible: {
       premise: concept.premise,
       genre: concept.genre ?? 'fantasy',
-      tone: 'tense, disciplined, mythic',
+      tone: 'căng thẳng, kỷ luật, có màu huyền sử',
       style_guide: { language },
       rules: { permanent_death_matters: true, cultivation_requires_cost: true }
     },
     world: {
-      name: 'Nine Vein Continent',
-      description: 'A divided continent where sword veins decide status and survival.',
-      rules: { sword_veins: 'power grows through trial, not inheritance' },
-      history: { founding_war: 'old emperors shattered the first sword road' }
+      name: 'Cửu Mạch Đại Lục',
+      description: 'Một đại lục chia rạn, nơi kiếm mạch quyết định địa vị và sinh tử.',
+      rules: { sword_veins: 'sức mạnh tăng qua thử luyện, không nhờ huyết thống' },
+      history: { founding_war: 'các cổ đế từng chém nát kiếm lộ đầu tiên' }
     },
     locations: [
-      { name: 'Ashen Gate Sect', kind: 'sect', description: 'A harsh outer sect guarding broken sword mines.', metadata: {} }
+      { name: 'Hôi Môn Tông', kind: 'tông môn', description: 'Ngoại tông khắc nghiệt canh giữ các mỏ kiếm mạch vỡ.', metadata: {} }
     ],
     factions: [
-      { name: 'Ashen Gate', kind: 'sect', description: 'A practical sect that values results over birth.', goals: ['control sword vein mines'], metadata: {} }
+      { name: 'Hôi Môn', kind: 'tông môn', description: 'Một tông môn thực dụng, trọng kết quả hơn xuất thân.', goals: ['kiểm soát mỏ kiếm mạch'], metadata: {} }
     ],
     characters: [
       {
-        name: 'Linh Kiem',
-        role: 'protagonist',
-        description: `${title} heir stripped of rank but not resolve.`,
-        personality: { core: 'patient, proud, observant' },
-        goals: ['recover lost sword vein', 'learn truth behind exile'],
-        secrets: ['he carries an unawakened emperor mark'],
+        name: 'Linh Kiếm',
+        role: 'nhân vật chính',
+        description: `Người thừa kế của ${title}, bị tước địa vị nhưng chưa mất ý chí.`,
+        personality: { core: 'nhẫn nại, kiêu hãnh, quan sát sắc bén' },
+        goals: ['khôi phục kiếm mạch đã mất', 'tìm sự thật sau cuộc lưu đày'],
+        secrets: ['mang đế ấn chưa thức tỉnh'],
         metadata: {},
         initial_state: {
-          status: 'alive',
-          power_state: { realm: 'Mortal Sword Initiate' },
-          inventory: ['cracked iron sword'],
+          status: 'còn sống',
+          power_state: { realm: 'Phàm Kiếm Sơ Cảnh' },
+          inventory: ['thiết kiếm nứt'],
           relationships: {},
-          notes: 'exiled but mobile',
-          current_location_name: 'Ashen Gate Sect'
+          notes: 'bị lưu đày nhưng vẫn tự do hành động',
+          current_location_name: 'Hôi Môn Tông'
         }
       }
     ],
     items: [
-      { name: 'cracked iron sword', kind: 'weapon', description: 'A plain blade with hidden resonance.', state: { condition: 'worn' }, owner_character_name: 'Linh Kiem' }
+      { name: 'thiết kiếm nứt', kind: 'vũ khí', description: 'Thanh kiếm tầm thường nhưng ẩn cộng hưởng cổ xưa.', state: { condition: 'mòn cũ' }, owner_character_name: 'Linh Kiếm' }
     ],
     abilities: [
-      { name: 'First Vein Listening', kind: 'cultivation', description: 'Sense faint sword intent in damaged metal.', rules: ['requires stillness'], limitations: ['fails under panic'], character_name: 'Linh Kiem' }
+      { name: 'Đệ Nhất Mạch Thính Kiếm', kind: 'tu luyện', description: 'Cảm nhận kiếm ý mỏng trong kim loại tổn hại.', rules: ['cần tĩnh tâm'], limitations: ['mất hiệu lực khi hoảng loạn'], character_name: 'Linh Kiếm' }
     ],
     timeline: {
-      name: 'Main Timeline',
-      description: 'Rise from exile to sword sovereignty.',
-      events: [{ sequence_number: 1, title: 'Exile', description: 'Linh Kiem reaches Ashen Gate.', event_type: 'backstory', payload: {} }]
+      name: 'Chính Tuyến',
+      description: 'Từ lưu đày đến kiếm đạo chí tôn.',
+      events: [{ sequence_number: 1, title: 'Lưu đày', description: 'Linh Kiếm đến Hôi Môn.', event_type: 'quá khứ', payload: {} }]
     },
     plot_threads: [
-      { title: 'Recover the lost sword vein', status: 'active', priority: 1, description: 'Find why the protagonist lost innate power.', metadata: {} }
+      { title: 'Khôi phục kiếm mạch đã mất', status: 'active', priority: 1, description: 'Tìm nguyên nhân nhân vật chính mất thiên phú.', metadata: {} }
     ]
   };
 }
@@ -178,11 +178,11 @@ function writeDeterministicChapter(title: string, context: WriterContext): Chapt
     : [];
   return {
     title: chapterTitle,
-    content: `${character.name} crossed ${location.name} and followed the chapter beat: ${beats.join(', ')}. The cracked iron sword answered once, enough to move the thread "${thread.title}" forward without breaking world rules.`,
-    summary: `${character.name} advanced ${thread.title} at ${location.name}.`,
-    word_count: 38,
+    content: `${character.name} bước qua ${location.name}, giữ hơi thở thật chậm để nghe tiếng kiếm mạch dưới lớp đá cháy. Nhịp chương mở ra bằng ${beats.join(', ')}. Thanh thiết kiếm nứt khẽ rung trong tay, không tạo kỳ tích rẻ tiền, chỉ đáp lại một lần như tàn lửa còn sống. Từ dấu hiệu nhỏ ấy, ${character.name} hiểu rằng con đường khôi phục kiếm mạch không nằm ở huyết thống đã mất, mà nằm trong từng lần chịu đau, từng lần ép bản thân đứng dậy. Tuyến truyện "${thread.title}" tiến thêm một bước, còn luật của thế giới vẫn được giữ: sức mạnh phải đổi bằng thử luyện.`,
+    summary: `${character.name} phát hiện kiếm ý yếu tại ${location.name} và tiến thêm trên tuyến "${thread.title}".`,
+    word_count: 118,
     advanced_plot_threads: [thread.title],
-    introduced_facts: [`${location.name} contains damaged sword intent.`],
+    introduced_facts: [`${location.name} còn sót kiếm ý bị tổn hại.`],
     continuity_risks: []
   };
 }
@@ -198,8 +198,8 @@ function extractDeterministicMemory(draft: ChapterDraft, chapterNumber: number, 
     location_deltas: [{ location_name: location.name, state_changes: { last_chapter_seen: chapterNumber } }],
     item_deltas: [],
     plot_thread_deltas: [{ thread_title: thread.title, status: 'active', development_summary: draft.summary }],
-    story_events: [{ title: draft.title, description: draft.summary, event_type: 'chapter_progress' }],
-    foreshadowing: [{ description: 'The cracked iron sword may contain an older intent.' }]
+    story_events: [{ title: draft.title, description: draft.summary, event_type: 'tiến triển_chương' }],
+    foreshadowing: [{ description: 'Thanh thiết kiếm nứt có thể chứa một luồng kiếm ý cổ hơn.' }]
   };
 }
 

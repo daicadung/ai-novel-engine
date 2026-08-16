@@ -46,7 +46,7 @@ describe('MVP pipeline', () => {
     expect(plan.statements.every(statement => statement.text.includes('ON CONFLICT DO NOTHING'))).toBe(true);
     expect(plan.statements.every(statement => !statement.text.includes('Ta La Kiem De'))).toBe(true);
     expect(plan.statements.every(statement => statement.values.length > 0)).toBe(true);
-    expect(plan.statements.flatMap(statement => statement.values).some(value => value === '["control sword vein mines"]')).toBe(true);
+    expect(plan.statements.flatMap(statement => statement.values).some(value => value === '["kiểm soát mỏ kiếm mạch"]')).toBe(true);
     expect(
       plan.statements.findIndex(statement => statement.text.startsWith('INSERT INTO arcs '))
     ).toBeLessThan(

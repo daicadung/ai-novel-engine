@@ -33,18 +33,18 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <header className="flex flex-col gap-4 border-b border-zinc-200 pb-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-700">MVP Generator</p>
-            <h1 className="text-2xl font-semibold tracking-tight">Title to checked chapters</h1>
+            <p className="text-sm font-medium text-blue-700">Bộ tạo truyện MVP</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Từ tên truyện đến 50 chương có kiểm tra logic</h1>
           </div>
           <form className="flex flex-col gap-2 sm:flex-row" action="/mvp">
             <input
-              aria-label="Novel title"
+              aria-label="Tên truyện"
               className="h-10 w-full min-w-0 border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-blue-500 sm:w-80"
               name="title"
               defaultValue={title}
             />
             <input
-              aria-label="Chapter count"
+              aria-label="Số chương"
               className="h-10 w-28 border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-blue-500"
               name="chapters"
               type="number"
@@ -53,14 +53,14 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
               defaultValue={chapterCount}
             />
             <button className="h-10 bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700" type="submit">
-              Generate
+              Tạo lại
             </button>
           </form>
           <form className="flex flex-col gap-2 sm:flex-row" action="/api/mvp/save" method="post">
             <input name="title" type="hidden" value={title} />
             <input name="chapters" type="hidden" value={chapterCount} />
             <button className="h-10 bg-green-700 px-4 text-sm font-medium text-white hover:bg-green-800" type="submit">
-              Save to Supabase
+              Lưu vào Supabase
             </button>
           </form>
           {error ? (
@@ -70,41 +70,41 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="border border-zinc-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Concept</p>
+            <p className="text-xs font-semibold uppercase text-zinc-500">Ý tưởng</p>
             <p className="mt-2 text-sm font-medium">{result.concept.title}</p>
           </div>
           <div className="border border-zinc-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Chapters</p>
+            <p className="text-xs font-semibold uppercase text-zinc-500">Số chương</p>
             <p className="mt-2 text-2xl font-semibold">{result.chapters.length}</p>
           </div>
           <div className="border border-zinc-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-zinc-500">Continuity</p>
+            <p className="text-xs font-semibold uppercase text-zinc-500">Logic truyện</p>
             <p className="mt-2 text-2xl font-semibold">{passedChecks}/{result.chapters.length}</p>
           </div>
           <div className="border border-zinc-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase text-zinc-500">SQL statements</p>
+            <p className="text-xs font-semibold uppercase text-zinc-500">Lệnh lưu DB</p>
             <p className="mt-2 text-2xl font-semibold">{insertPlan.statements.length}</p>
           </div>
         </section>
 
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="border border-zinc-200 bg-white p-5">
-            <h2 className="text-sm font-semibold uppercase text-zinc-500">Story Bible</h2>
+            <h2 className="text-sm font-semibold uppercase text-zinc-500">Hồ sơ truyện</h2>
             <p className="mt-3 text-sm text-zinc-700">{result.bible.bible.premise}</p>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
-                <dt className="text-zinc-500">World</dt>
+                <dt className="text-zinc-500">Thế giới</dt>
                 <dd className="font-medium">{result.bible.world.name}</dd>
               </div>
               <div>
-                <dt className="text-zinc-500">Protagonist</dt>
+                <dt className="text-zinc-500">Nhân vật chính</dt>
                 <dd className="font-medium">{result.bible.characters[0]?.name}</dd>
               </div>
             </dl>
           </div>
 
           <div className="border border-zinc-200 bg-white p-5">
-            <h2 className="text-sm font-semibold uppercase text-zinc-500">Persistence Payload</h2>
+            <h2 className="text-sm font-semibold uppercase text-zinc-500">Dữ liệu sẽ lưu</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <span>concept_candidates</span><strong>{payloads.concept_candidates.length}</strong>
               <span>story_dna</span><strong>{payloads.story_dna.length}</strong>
@@ -116,28 +116,22 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
         </section>
 
         <section className="border border-zinc-200 bg-white p-5">
-          <h2 className="text-sm font-semibold uppercase text-zinc-500">Recent Generated Chapters</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
-                <tr>
-                  <th className="py-2 pr-4 font-medium">Chapter</th>
-                  <th className="py-2 pr-4 font-medium">Title</th>
-                  <th className="py-2 pr-4 font-medium">Memory</th>
-                  <th className="py-2 pr-4 font-medium">Continuity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.chapters.slice(-10).map(chapter => (
-                  <tr className="border-b border-zinc-100" key={chapter.memory.chapter_number}>
-                    <td className="py-3 pr-4 text-zinc-500">{chapter.memory.chapter_number}</td>
-                    <td className="py-3 pr-4 font-medium">{chapter.draft.title}</td>
-                    <td className="py-3 pr-4">{chapter.memory.story_events.length} event</td>
-                    <td className="py-3 pr-4">{chapter.continuity.pass ? 'pass' : 'fail'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h2 className="text-sm font-semibold uppercase text-zinc-500">Toàn bộ chương đã tạo</h2>
+          <div className="mt-4 flex flex-col gap-4">
+            {result.chapters.map(chapter => (
+              <article className="border border-zinc-200 bg-zinc-50 p-4" key={chapter.memory.chapter_number}>
+                <div className="flex flex-col gap-1 border-b border-zinc-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="font-semibold">Chương {chapter.memory.chapter_number}: {chapter.draft.title}</h3>
+                  <span className="text-sm text-zinc-500">
+                    {chapter.continuity.pass ? 'Logic đạt' : 'Cần sửa logic'} · {chapter.memory.story_events.length} sự kiện
+                  </span>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-zinc-800">{chapter.draft.content}</p>
+                <p className="mt-3 text-sm text-zinc-600">
+                  <strong>Tóm tắt:</strong> {chapter.draft.summary}
+                </p>
+              </article>
+            ))}
           </div>
         </section>
       </div>

@@ -134,10 +134,10 @@ export class LongformPlanner {
           id: subArcId,
           arc_id: arcId,
           sub_arc_number: j,
-          title: `Sub-Arc ${i}.${j}`,
-          purpose: `Pacing progression ${j}`,
+          title: `Mạch truyện ${i}.${j}`,
+          purpose: `Đẩy nhịp trưởng thành ${j}`,
           status: 'planned',
-          summary: `Summary of Sub-Arc ${i}.${j}`,
+          summary: `Tóm tắt mạch truyện ${i}.${j}`,
           metadata: { phase: subArcPhase }
         });
 
@@ -155,9 +155,9 @@ export class LongformPlanner {
             arc_id: arcId,
             sub_arc_id: subArcId,
             chapter_number: globalChapter,
-            title: `Chapter ${globalChapter}`,
-            purpose: `Move plot thread forward`,
-            outline: { beats: [`Primary beat: ${chapPhase}`] },
+            title: `Chương ${globalChapter}`,
+            purpose: `Đẩy tuyến truyện chính tiến lên`,
+            outline: { beats: [`Nhịp chính: ${chapPhase}`] },
             status: 'planned'
           });
           globalChapter++;
