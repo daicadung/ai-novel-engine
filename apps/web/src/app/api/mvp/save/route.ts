@@ -31,24 +31,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.redirect(new URL(`/mvp?error=${encodeURIComponent('OPENAI_API_KEY is not configured')}`, request.url), 303);
   }
 
-  const result = await generateMvpNovelWithGateway(
-    title,
-    new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey, baseUrl: openAiBaseUrl }) }),
-    { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1800 },
-    { chapterCount, language: 'Vietnamese' }
-  );
-  const payloads = mapMvpNovelToPersistence(result, { ownerId: user.id, novelId });
+  try {
+    const result = await generateMvpNovelWithGateway(
+      title,
+      new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey, baseUrl: openAiBaseUrl }) }),
+      { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1800 },
+      { chapterCount, language: 'Vietnamese' }
+    );
+    const payloads = mapMvpNovelToPersistence(result, { ownerId: user.id, novelId });
 
-  for (const table of MVP_INSERT_TABLE_ORDER) {
-    const rows = payloads[table];
-    if (rows.length === 0) continue;
+    for (const table of MVP_INSERT_TABLE_ORDER) {
+      const rows = payloads[table];
+      if (rows.length === 0) continue;
 
-    const { error } = await supabase.from(table).insert(rows);
-    if (error) {
-      await supabase.from('novels').delete().eq('id', novelId);
-      return NextResponse.redirect(new URL(`/mvp?error=${encodeURIComponent(`${table}: ${error.message}`)}`, request.url), 303);
+      const { error } = await supabase.from(table).insert(rows);
+      if (error) {
+        await supabase.from('novels').delete().eq('id', novelId);
+        return NextResponse.redirect(new URL(`/mvp?error=${encodeURIComponent(`${table}: ${error.message}`)}`, request.url), 303);
+      }
     }
-  }
 
-  return NextResponse.redirect(new URL(`/protected?novel=${novelId}`, request.url), 303);
+    return NextResponse.redirect(new URL(`/protected?novel=${novelId}`, request.url), 303);
+  } catch (error: any) {
+    console.error('API Error:', error);
+    return NextResponse.redirect(new URL(`/mvp?error=${encodeURIComponent(error.message || 'Unknown error occurred')}`, request.url), 303);
+  }
 }
