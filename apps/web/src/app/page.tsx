@@ -146,7 +146,7 @@ export default function Dashboard() {
                 <thead className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/50 uppercase border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
                     <th className="px-4 py-2 font-medium">Ch.</th>
-                    <th className="px-4 py-2 font-medium">Title</th>
+                    <th className="px-4 py-2 font-medium">Tiêu đề</th>
                     <th className="px-4 py-2 font-medium">Words</th>
                     <th className="px-4 py-2 font-medium">Trạng thái</th>
                   </tr>
