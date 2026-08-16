@@ -55,6 +55,13 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
               Generate
             </button>
           </form>
+          <form className="flex flex-col gap-2 sm:flex-row" action="/api/mvp/save" method="post">
+            <input name="title" type="hidden" value={title} />
+            <input name="chapters" type="hidden" value={chapterCount} />
+            <button className="h-10 bg-green-700 px-4 text-sm font-medium text-white hover:bg-green-800" type="submit">
+              Save to Supabase
+            </button>
+          </form>
         </header>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">

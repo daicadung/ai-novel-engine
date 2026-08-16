@@ -42,7 +42,7 @@ export interface SqlInsertPlan {
   statements: SqlStatement[];
 }
 
-const INSERT_TABLE_ORDER = [
+export const MVP_INSERT_TABLE_ORDER = [
   'novels',
   'concept_candidates',
   'story_dna',
@@ -273,7 +273,7 @@ export function mapMvpNovelToPersistence(
 
 export function buildMvpInsertPlan(payloads: MvpPersistencePayloads): SqlInsertPlan {
   return {
-    statements: INSERT_TABLE_ORDER.flatMap(table => {
+    statements: MVP_INSERT_TABLE_ORDER.flatMap(table => {
       const rows = payloads[table];
       return rows.map(row => buildInsertStatement(table, row));
     })
@@ -297,7 +297,7 @@ function firstLocationId(locationIds: Map<string, string>): string | null {
   return locationIds.values().next().value ?? null;
 }
 
-function buildInsertStatement(table: typeof INSERT_TABLE_ORDER[number], row: Record<string, unknown>): SqlStatement {
+function buildInsertStatement(table: typeof MVP_INSERT_TABLE_ORDER[number], row: Record<string, unknown>): SqlStatement {
   const columns = Object.keys(row).filter(column => row[column] !== undefined);
   if (columns.length === 0) {
     throw new Error(`Cannot build insert for ${table} without columns.`);
