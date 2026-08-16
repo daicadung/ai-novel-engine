@@ -1,9 +1,9 @@
-import { ConceptCandidate, StoryDna } from '@ai-novel-engine/concept-engine';
+import { ConceptCandidate, StoryDna, ConceptEngine } from '@ai-novel-engine/concept-engine';
 import { ChapterDraft, ChapterWriter, WriterConfig, WriterContext } from '@ai-novel-engine/chapter-writer';
 import { LlmGateway } from '@ai-novel-engine/llm-gateway';
 import { LongformPlanner, LongformPlan } from '@ai-novel-engine/longform-planner';
-import { ContinuityChecker, ContinuityReport, ContinuitySnapshot, ExtractedMemory } from '@ai-novel-engine/memory-continuity';
-import { StoryBibleDraft } from '@ai-novel-engine/story-architect';
+import { ContinuityChecker, ContinuityReport, ContinuitySnapshot, ExtractedMemory, MemoryExtractor } from '@ai-novel-engine/memory-continuity';
+import { StoryBibleDraft, StoryArchitect } from '@ai-novel-engine/story-architect';
 
 export interface MvpPipelineOptions {
   chapterCount?: number;
@@ -80,16 +80,44 @@ export async function generateMvpNovelWithGateway(
   }
 
   const language = options.language ?? 'Vietnamese';
-  const concept = buildConcept(cleanTitle);
-  const dna = buildDna(concept);
-  const bible = buildBible(cleanTitle, concept, language);
+  
+  // 1. Concept Engine
+  const conceptEngine = new ConceptEngine(gateway, {
+    provider: writerConfig.provider,
+    model: writerConfig.model,
+    temperature: writerConfig.temperature,
+  });
+  const conceptResult = await conceptEngine.generateConcepts(cleanTitle);
+  const concept = conceptResult.candidates[0];
+  if (!concept) throw new Error('Failed to generate concept');
+  const dna = await conceptEngine.extractStoryDna(concept);
+
+  // 2. Story Architect
+  const architect = new StoryArchitect(gateway, {
+    provider: writerConfig.provider,
+    model: writerConfig.model,
+    temperature: writerConfig.temperature,
+  });
+  const bibleResult = await architect.generateStoryBible({
+    title: cleanTitle,
+    concept,
+    dna,
+    language,
+  });
+  const bible = bibleResult.draft;
+
+  // 3. Longform Planner
   const planner = new LongformPlanner();
   const plan = planner.plan(
     { title: cleanTitle, bible },
     { targetChapters: chapterCount, targetArcs: Math.min(3, chapterCount), seed: cleanTitle }
   );
+
+  // 4. Chapter Writer & Memory Extractor
   const writer = new ChapterWriter(gateway);
+  const extractor = new MemoryExtractor(gateway);
   const checker = new ContinuityChecker();
+  
   const chapters: MvpChapterResult[] = [];
   const summaries: string[] = [];
   const snapshot = buildInitialSnapshot(bible);
@@ -97,7 +125,11 @@ export async function generateMvpNovelWithGateway(
   for (const outline of plan.chapter_outlines) {
     const context = buildWriterContext(outline, summaries, bible, plan, language);
     const draft = await writer.write(context, writerConfig);
-    const memory = extractDeterministicMemory(draft, outline.chapter_number, bible);
+    const memory = await extractor.extract(draft, outline.chapter_number, {
+      provider: writerConfig.provider,
+      model: writerConfig.model,
+      temperature: 0.2, // Low temp for extraction
+    });
     const continuity = checker.check(draft, memory, snapshot);
     chapters.push({ draft, memory, continuity });
     summaries.push(draft.summary);
