@@ -127,4 +127,5 @@ export interface StoryArchitectConfig {
   provider: LlmProvider;
   model: string;
   temperature?: number;
+  timeoutMs?: number;
 }

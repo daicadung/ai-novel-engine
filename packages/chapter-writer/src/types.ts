@@ -40,4 +40,5 @@ export interface WriterConfig {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 }

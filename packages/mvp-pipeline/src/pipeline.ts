@@ -80,12 +80,14 @@ export async function generateMvpNovelWithGateway(
   }
 
   const language = options.language ?? 'Vietnamese';
+  const timeoutMs = writerConfig.timeoutMs ?? 85000; // 85s per LLM call to stay under Cloudflare 100s limit
   
   // 1. Concept Engine
   const conceptEngine = new ConceptEngine(gateway, {
     provider: writerConfig.provider,
     model: writerConfig.model,
     temperature: writerConfig.temperature,
+    timeoutMs,
   });
   const conceptResult = await conceptEngine.generateConcepts(cleanTitle);
   const concept = conceptResult.candidates[0];
@@ -97,6 +99,7 @@ export async function generateMvpNovelWithGateway(
     provider: writerConfig.provider,
     model: writerConfig.model,
     temperature: writerConfig.temperature,
+    timeoutMs,
   });
   const bibleResult = await architect.generateStoryBible({
     title: cleanTitle,
@@ -128,7 +131,8 @@ export async function generateMvpNovelWithGateway(
     const memory = await extractor.extract(draft, outline.chapter_number, {
       provider: writerConfig.provider,
       model: writerConfig.model,
-      temperature: 0.2, // Low temp for extraction
+      temperature: 0.2,
+      maxTokens: 800,
     });
     const continuity = checker.check(draft, memory, snapshot);
     chapters.push({ draft, memory, continuity });

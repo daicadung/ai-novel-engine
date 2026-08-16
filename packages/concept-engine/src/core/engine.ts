@@ -20,6 +20,7 @@ export class ConceptEngine {
         model: this.config.model,
         messages,
         temperature: this.config.temperature ?? 0.8,
+        timeoutMs: this.config.timeoutMs,
       },
       { provider: this.config.provider, model: this.config.model }
     );
@@ -36,7 +37,8 @@ export class ConceptEngine {
         provider: this.config.provider,
         model: this.config.model,
         messages,
-        temperature: 0.1, // Low temp for analytical extraction
+        temperature: 0.1,
+        timeoutMs: this.config.timeoutMs,
       },
       { provider: this.config.provider, model: this.config.model }
     );

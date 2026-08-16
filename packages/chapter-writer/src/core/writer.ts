@@ -15,6 +15,7 @@ export class ChapterWriter {
       model: config.model,
       temperature: config.temperature ?? 0.7,
       max_tokens: config.maxTokens,
+      timeoutMs: config.timeoutMs,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

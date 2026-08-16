@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const result = await generateMvpNovelWithGateway(
       title,
       new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey, baseUrl: openAiBaseUrl }) }),
-      { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1800 },
+      { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1200, timeoutMs: 85000 },
       { chapterCount, language: 'Vietnamese' }
     );
     const payloads = mapMvpNovelToPersistence(result, { ownerId: user.id, novelId });
