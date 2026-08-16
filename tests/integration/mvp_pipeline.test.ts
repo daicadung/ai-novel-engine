@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateMvpNovel, mapMvpNovelToPersistence } from '../../packages/mvp-pipeline/src';
+import { buildMvpInsertPlan, generateMvpNovel, mapMvpNovelToPersistence } from '../../packages/mvp-pipeline/src';
 
 describe('MVP end-to-end contract', () => {
   it('proves title-only input can reach chapter memory and continuity checks', () => {
@@ -24,5 +24,23 @@ describe('MVP end-to-end contract', () => {
     expect(payloads.chapter_outlines).toHaveLength(50);
     expect(payloads.chapters).toHaveLength(50);
     expect(payloads.story_events.length).toBeGreaterThanOrEqual(50);
+    expect(payloads.arcs.every(row => isUuid(row.id))).toBe(true);
+    expect(payloads.sub_arcs.every(row => isUuid(row.id) && isUuid(row.arc_id))).toBe(true);
+    expect(payloads.chapter_outlines.every(row =>
+      isUuid(row.id) && isUuid(row.arc_id) && isUuid(row.sub_arc_id)
+    )).toBe(true);
+    expect(payloads.chapters.every(row => isUuid(row.id) && isUuid(row.outline_id))).toBe(true);
+    expect(payloads.character_states.every(row => isUuid(row.id) && isUuid(row.character_id))).toBe(true);
+
+    const insertPlan = buildMvpInsertPlan(payloads);
+    expect(insertPlan.statements.length).toBeGreaterThan(50);
+    expect(insertPlan.statements[0].text).toMatch(/^INSERT INTO novels /);
+    expect(insertPlan.statements.every(statement => !statement.text.includes('Ta La Kiem De'))).toBe(true);
+    expect(insertPlan.statements.every(statement => statement.values.length > 0)).toBe(true);
   });
 });
+
+function isUuid(value: unknown): boolean {
+  return typeof value === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value);
+}
