@@ -6,6 +6,7 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
+    "migration:bundle": "node scripts/print-migration-bundle.mjs",
     "project:doctor": "node scripts/doctor.mjs",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",

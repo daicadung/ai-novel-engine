@@ -12,16 +12,18 @@ To run the project locally, ensure you have:
 ## Database-Backed Testing
 Many integration tests will skip if a database connection is not detected. To run them properly:
 1. Start or provision a Postgres database compatible with the Supabase schema.
-2. Retrieve the connection string and set it in your \`.env\`:
+2. Apply migrations in order. If Supabase CLI is unavailable, run \`pnpm migration:bundle\` and paste the output into the Supabase SQL Editor.
+3. Retrieve the connection string and set it in your \`.env\`:
    \`\`\`bash
    DATABASE_URL="postgres://postgres:postgres@127.0.0.1:54322/postgres?sslmode=require&uselibpqcompat=true"
    \`\`\`
    For Supabase pooler URLs, keep `sslmode=require&uselibpqcompat=true` to avoid local Node TLS rejecting the managed certificate chain during DB-backed tests.
-3. Run the DB-backed tests: \`pnpm test:db\`
-4. Run the full suite: \`pnpm test\`
+4. Run the DB-backed tests: \`pnpm test:db\`
+5. Run the full suite: \`pnpm test\`
 
 ## Build & Release Commands
 - \`pnpm project:doctor\`: Reports required project artifacts, DB readiness, and gate commands.
+- \`pnpm migration:bundle\`: Prints all SQL migrations in the order needed by a remote Supabase SQL Editor.
 - \`pnpm lint\`: Checks code quality across packages.
 - \`pnpm typecheck\`: Runs strict TypeScript verification.
 - \`pnpm test\`: Executes unit and integration test suites.

@@ -305,6 +305,16 @@ function buildInsertStatement(table: typeof INSERT_TABLE_ORDER[number], row: Rec
 
   return {
     text: `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${columns.map((_, index) => `$${index + 1}`).join(', ')}) ON CONFLICT DO NOTHING;`,
-    values: columns.map(column => row[column])
+    values: columns.map(column => toSqlValue(row[column]))
   };
+}
+
+function toSqlValue(value: unknown): unknown {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return value;
 }
