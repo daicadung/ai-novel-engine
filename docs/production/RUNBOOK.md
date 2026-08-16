@@ -14,8 +14,9 @@ Many integration tests will skip if a database connection is not detected. To ru
 1. Start or provision a Postgres database compatible with the Supabase schema.
 2. Retrieve the connection string and set it in your \`.env\`:
    \`\`\`bash
-   DATABASE_URL="postgres://postgres:postgres@127.0.0.1:54322/postgres"
+   DATABASE_URL="postgres://postgres:postgres@127.0.0.1:54322/postgres?sslmode=require&uselibpqcompat=true"
    \`\`\`
+   For Supabase pooler URLs, keep `sslmode=require&uselibpqcompat=true` to avoid local Node TLS rejecting the managed certificate chain during DB-backed tests.
 3. Run the DB-backed tests: \`pnpm test:db\`
 4. Run the full suite: \`pnpm test\`
 
