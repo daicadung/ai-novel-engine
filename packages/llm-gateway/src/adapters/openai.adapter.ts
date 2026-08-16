@@ -44,8 +44,16 @@ export class OpenAiAdapter implements LlmProviderAdapter {
       });
 
       if (!res.ok) {
+        // Read body to get detailed error message from the provider (9router, OpenAI, etc.)
+        let errorBody = '';
+        try {
+          const errJson = await res.json();
+          errorBody = errJson?.error?.message || errJson?.message || JSON.stringify(errJson);
+        } catch {
+          try { errorBody = await res.text(); } catch { errorBody = res.statusText || String(res.status); }
+        }
         throw new LlmGatewayError(
-          `OpenAI API error: ${res.statusText}`,
+          `OpenAI API error ${res.status}: ${errorBody}`,
           'openai',
           [429, 500, 502, 503, 504].includes(res.status),
           res.status
