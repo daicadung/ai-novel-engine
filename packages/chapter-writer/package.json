@@ -1,0 +1,23 @@
+{
+  "name": "@ai-novel-engine/chapter-writer",
+  "version": "1.0.0",
+  "description": "Chapter generation and context building layer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-novel-engine/llm-gateway": "workspace:*",
+    "@ai-novel-engine/story-architect": "workspace:*",
+    "@ai-novel-engine/longform-planner": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@ai-novel-engine/concept-engine",
+  "version": "1.0.0",
+  "description": "AI Pipeline for generating Concept Candidates and Story DNA",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-novel-engine/llm-gateway": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

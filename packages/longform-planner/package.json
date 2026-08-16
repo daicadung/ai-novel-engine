@@ -1,0 +1,21 @@
+{
+  "name": "@ai-novel-engine/longform-planner",
+  "version": "1.0.0",
+  "description": "Deterministic architecture planning for AI Novel Engine",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-novel-engine/story-architect": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@ai-novel-engine/domain",
+  "version": "1.0.0",
+  "description": "Core Domain Types for AI Novel Engine",
+  "main": "src/index.ts",
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

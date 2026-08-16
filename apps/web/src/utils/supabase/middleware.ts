@@ -10,7 +10,7 @@ export async function updateSession(request: NextRequest) {
   let env;
   try {
     env = getEnv()
-  } catch (_error) {
+  } catch {
     if (request.nextUrl.pathname.startsWith('/protected')) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'

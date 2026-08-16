@@ -79,11 +79,146 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/chapter-writer:
+    dependencies:
+      '@ai-novel-engine/llm-gateway':
+        specifier: workspace:*
+        version: link:../llm-gateway
+      '@ai-novel-engine/longform-planner':
+        specifier: workspace:*
+        version: link:../longform-planner
+      '@ai-novel-engine/story-architect':
+        specifier: workspace:*
+        version: link:../story-architect
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)(jsdom@30.0.1)(lightningcss@1.32.0)(supports-color@7.2.0)
+
+  packages/concept-engine:
+    dependencies:
+      '@ai-novel-engine/llm-gateway':
+        specifier: workspace:*
+        version: link:../llm-gateway
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
   packages/config:
     dependencies:
       zod:
         specifier: ^3.22.4
         version: 3.25.76
+
+  packages/domain:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
+  packages/generation-orchestrator:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)(jsdom@30.0.1)(lightningcss@1.32.0)(supports-color@7.2.0)
+
+  packages/llm-gateway:
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
+  packages/longform-planner:
+    dependencies:
+      '@ai-novel-engine/story-architect':
+        specifier: workspace:*
+        version: link:../story-architect
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)(jsdom@30.0.1)(lightningcss@1.32.0)(supports-color@7.2.0)
+
+  packages/memory-continuity:
+    dependencies:
+      '@ai-novel-engine/chapter-writer':
+        specifier: workspace:*
+        version: link:../chapter-writer
+      '@ai-novel-engine/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@ai-novel-engine/llm-gateway':
+        specifier: workspace:*
+        version: link:../llm-gateway
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)(jsdom@30.0.1)(lightningcss@1.32.0)(supports-color@7.2.0)
+
+  packages/mvp-pipeline:
+    dependencies:
+      '@ai-novel-engine/chapter-writer':
+        specifier: workspace:*
+        version: link:../chapter-writer
+      '@ai-novel-engine/concept-engine':
+        specifier: workspace:*
+        version: link:../concept-engine
+      '@ai-novel-engine/longform-planner':
+        specifier: workspace:*
+        version: link:../longform-planner
+      '@ai-novel-engine/memory-continuity':
+        specifier: workspace:*
+        version: link:../memory-continuity
+      '@ai-novel-engine/story-architect':
+        specifier: workspace:*
+        version: link:../story-architect
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.43
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.43)(jsdom@30.0.1)(lightningcss@1.32.0)(supports-color@7.2.0)
+
+  packages/story-architect:
+    dependencies:
+      '@ai-novel-engine/concept-engine':
+        specifier: workspace:*
+        version: link:../concept-engine
+      '@ai-novel-engine/llm-gateway':
+        specifier: workspace:*
+        version: link:../llm-gateway
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
 packages:
 

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   let env;
   try {
     env = getEnv()
-  } catch (_err) {
+  } catch {
     const response = NextResponse.json({
       status: 'degraded',
       message: 'Environment configuration missing',

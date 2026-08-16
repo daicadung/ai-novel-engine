@@ -1,0 +1,20 @@
+{
+  "name": "@ai-novel-engine/story-architect",
+  "version": "1.0.0",
+  "description": "AI Pipeline for generating structured Story Bible payloads",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-novel-engine/llm-gateway": "workspace:*",
+    "@ai-novel-engine/concept-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

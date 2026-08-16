@@ -169,4 +169,7 @@
 11. **Workspace hygiene**: Cleaned nested configurations and unified pnpm lockfile.
     - Affected files: `package.json`, `apps/web/package.json`
     - Validation: `pnpm install` (Passed)
-    - Risk: Low
+12. **Phase 0 Final Review Remediation**:
+    - **Lint Fixes**: Fixed unused variable warnings in `apps/web/src/app/api/health/route.ts` and `apps/web/src/utils/supabase/middleware.ts` by using `catch { ... }` where the error variable wasn't needed.
+    - **RLS Test Corrections**: Updated `tests/integration/rls.test.ts` to use parameterized queries (`$1, $2`) for security, correctly mapped to the `workspace_items` schema (using `id, owner_id, title, content` instead of nonexistent `workspace_id, type` columns). Test now explicitly seeds `auth.users` rows for User A and User B to satisfy foreign key constraints before inserting into `workspace_items`, preventing false failures (FK `23503`) during real DB testing. It asserts user A cannot read/write user B's records, and rolls back cleanly in `finally` blocks.
+    - **Test Outcomes**: Tests run locally will skip DB integrations visibly (`ctx.skip()`) if the local database is offline (meaning no DB local). When DB is available, tests fail correctly if `auth.users` or the `authenticated` role is missing, rather than silently passing. `pnpm lint`, `typecheck`, `test`, and `build` all pass hermetically without errors or warnings.
