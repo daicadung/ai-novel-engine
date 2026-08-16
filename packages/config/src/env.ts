@@ -3,6 +3,9 @@ import { z } from 'zod';
 const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(), // No longer strictly required for basic boot
   NINE_ROUTER_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().optional(),
+  OPENAI_MODEL: z.string().optional(),
 });
 
 const clientSchema = z.object({

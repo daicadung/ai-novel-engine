@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   MVP_INSERT_TABLE_ORDER,
+  generateMvpNovelWithGateway,
   generateMvpNovel,
   mapMvpNovelToPersistence
 } from '@ai-novel-engine/mvp-pipeline';
+import { LlmGateway, OpenAiAdapter } from '@ai-novel-engine/llm-gateway';
 import { createClient } from '@/utils/supabase/server';
 
 function numberParam(value: FormDataEntryValue | null, fallback: number): number {
@@ -23,7 +25,17 @@ export async function POST(request: NextRequest) {
   }
 
   const novelId = crypto.randomUUID();
-  const result = generateMvpNovel(title, { chapterCount });
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const openAiModel = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const openAiBaseUrl = process.env.OPENAI_BASE_URL;
+  const result = openAiKey
+    ? await generateMvpNovelWithGateway(
+      title,
+      new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey, baseUrl: openAiBaseUrl }) }),
+      { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1800 },
+      { chapterCount, language: 'Vietnamese' }
+    )
+    : generateMvpNovel(title, { chapterCount });
   const payloads = mapMvpNovelToPersistence(result, { ownerId: user.id, novelId });
 
   for (const table of MVP_INSERT_TABLE_ORDER) {

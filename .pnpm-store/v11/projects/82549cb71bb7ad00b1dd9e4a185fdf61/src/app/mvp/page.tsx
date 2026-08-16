@@ -35,6 +35,7 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
           <div>
             <p className="text-sm font-medium text-blue-700">Bộ tạo truyện MVP</p>
             <h1 className="text-2xl font-semibold tracking-tight">Từ tên truyện đến 50 chương có kiểm tra logic</h1>
+            <p className="mt-1 text-sm text-zinc-600">Bấm lưu để tạo nội dung bằng OpenAI và ghi vào Supabase.</p>
           </div>
           <form className="flex flex-col gap-2 sm:flex-row" action="/mvp">
             <input

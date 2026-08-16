@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { generateMvpNovel } from '../pipeline';
+import { generateMvpNovel, generateMvpNovelWithGateway } from '../pipeline';
 import { buildMvpInsertPlan, mapMvpNovelToPersistence } from '../persistence';
+import { LlmGateway, LlmRequest } from '@ai-novel-engine/llm-gateway';
 
 describe('MVP pipeline', () => {
   it('runs title to checked chapters without external services', () => {
@@ -31,6 +32,43 @@ describe('MVP pipeline', () => {
     expect(payloads.chapters).toHaveLength(50);
     expect(payloads.character_states.length).toBeGreaterThanOrEqual(50);
     expect(payloads.story_events.length).toBeGreaterThanOrEqual(50);
+  });
+
+  it('uses an LLM gateway for chapter prose when configured', async () => {
+    let calls = 0;
+    const gateway = new LlmGateway({
+      mock: {
+        async generate(request: LlmRequest) {
+          calls++;
+          return {
+            provider: 'mock',
+            model: request.model,
+            message: {
+              role: 'assistant',
+              content: JSON.stringify({
+                title: `Chương AI ${calls}`,
+                content: `Đây là nội dung AI riêng cho chương ${calls}.`,
+                summary: `Tóm tắt chương ${calls}.`,
+                word_count: 12,
+                advanced_plot_threads: ['Khôi phục kiếm mạch đã mất'],
+                introduced_facts: [`Dấu hiệu riêng ${calls}`],
+                continuity_risks: []
+              })
+            }
+          };
+        }
+      }
+    });
+
+    const novel = await generateMvpNovelWithGateway(
+      'Ta La Kiem De',
+      gateway,
+      { provider: 'mock', model: 'mock-writer' },
+      { chapterCount: 3 }
+    );
+
+    expect(calls).toBe(3);
+    expect(novel.chapters.map(chapter => chapter.draft.title)).toEqual(['Chương AI 1', 'Chương AI 2', 'Chương AI 3']);
   });
 
   it('builds a parameterized SQL insert plan in FK-safe order', () => {

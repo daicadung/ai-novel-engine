@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-novel-engine/chapter-writer": "workspace:*",
     "@ai-novel-engine/concept-engine": "workspace:*",
+    "@ai-novel-engine/llm-gateway": "workspace:*",
     "@ai-novel-engine/longform-planner": "workspace:*",
     "@ai-novel-engine/memory-continuity": "workspace:*",
     "@ai-novel-engine/story-architect": "workspace:*"

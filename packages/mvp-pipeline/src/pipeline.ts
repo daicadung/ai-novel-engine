@@ -1,5 +1,6 @@
 import { ConceptCandidate, StoryDna } from '@ai-novel-engine/concept-engine';
-import { ChapterDraft, WriterContext } from '@ai-novel-engine/chapter-writer';
+import { ChapterDraft, ChapterWriter, WriterConfig, WriterContext } from '@ai-novel-engine/chapter-writer';
+import { LlmGateway } from '@ai-novel-engine/llm-gateway';
 import { LongformPlanner, LongformPlan } from '@ai-novel-engine/longform-planner';
 import { ContinuityChecker, ContinuityReport, ContinuitySnapshot, ExtractedMemory } from '@ai-novel-engine/memory-continuity';
 import { StoryBibleDraft } from '@ai-novel-engine/story-architect';
@@ -50,26 +51,7 @@ export function generateMvpNovel(title: string, options: MvpPipelineOptions = {}
   const snapshot = buildInitialSnapshot(bible);
 
   for (const outline of plan.chapter_outlines) {
-    const context: WriterContext = {
-      target_outline: outline,
-      previous_summaries: summaries.slice(-3),
-      relevant_characters: bible.characters,
-      relevant_locations: bible.locations,
-      active_plot_threads: plan.plot_threads.filter(thread => thread.status !== 'resolved'),
-      recent_story_events: plan.story_events.slice(-5),
-      style_guide: {
-        language,
-        tone: bible.bible.tone,
-        pov: 'third-person limited',
-        tense: 'past',
-        prose_density: 'medium',
-        dialogue_ratio: 'balanced',
-        taboo_phrases: [],
-        required_rules: ['preserve established world rules', 'advance one active plot thread']
-      },
-      world_rules: bible.world.rules,
-      continuity_notes: 'Use only established characters, locations, and items.'
-    };
+    const context = buildWriterContext(outline, summaries, bible, plan, language);
     const draft = writeDeterministicChapter(cleanTitle, context);
     const memory = extractDeterministicMemory(draft, outline.chapter_number, bible);
     const continuity = checker.check(draft, memory, snapshot);
@@ -79,6 +61,79 @@ export function generateMvpNovel(title: string, options: MvpPipelineOptions = {}
   }
 
   return { title: cleanTitle, concept, dna, bible, plan, chapters };
+}
+
+export async function generateMvpNovelWithGateway(
+  title: string,
+  gateway: LlmGateway,
+  writerConfig: WriterConfig,
+  options: MvpPipelineOptions = {}
+): Promise<MvpNovelResult> {
+  const cleanTitle = title.trim();
+  if (!cleanTitle) {
+    throw new Error('Title must not be empty.');
+  }
+
+  const chapterCount = options.chapterCount ?? 3;
+  if (!Number.isInteger(chapterCount) || chapterCount < 1) {
+    throw new Error('chapterCount must be a positive integer.');
+  }
+
+  const language = options.language ?? 'Vietnamese';
+  const concept = buildConcept(cleanTitle);
+  const dna = buildDna(concept);
+  const bible = buildBible(cleanTitle, concept, language);
+  const planner = new LongformPlanner();
+  const plan = planner.plan(
+    { title: cleanTitle, bible },
+    { targetChapters: chapterCount, targetArcs: Math.min(3, chapterCount), seed: cleanTitle }
+  );
+  const writer = new ChapterWriter(gateway);
+  const checker = new ContinuityChecker();
+  const chapters: MvpChapterResult[] = [];
+  const summaries: string[] = [];
+  const snapshot = buildInitialSnapshot(bible);
+
+  for (const outline of plan.chapter_outlines) {
+    const context = buildWriterContext(outline, summaries, bible, plan, language);
+    const draft = await writer.write(context, writerConfig);
+    const memory = extractDeterministicMemory(draft, outline.chapter_number, bible);
+    const continuity = checker.check(draft, memory, snapshot);
+    chapters.push({ draft, memory, continuity });
+    summaries.push(draft.summary);
+    applyMemory(snapshot, memory);
+  }
+
+  return { title: cleanTitle, concept, dna, bible, plan, chapters };
+}
+
+function buildWriterContext(
+  outline: LongformPlan['chapter_outlines'][number],
+  summaries: string[],
+  bible: StoryBibleDraft,
+  plan: LongformPlan,
+  language: string
+): WriterContext {
+  return {
+    target_outline: outline,
+    previous_summaries: summaries.slice(-3),
+    relevant_characters: bible.characters,
+    relevant_locations: bible.locations,
+    active_plot_threads: plan.plot_threads.filter(thread => thread.status !== 'resolved'),
+    recent_story_events: plan.story_events.slice(-5),
+    style_guide: {
+      language,
+      tone: bible.bible.tone,
+      pov: 'ngôi thứ ba giới hạn',
+      tense: 'quá khứ',
+      prose_density: 'vừa',
+      dialogue_ratio: 'cân bằng',
+      taboo_phrases: [],
+      required_rules: ['giữ đúng luật thế giới đã lập', 'đẩy ít nhất một tuyến truyện tiến lên']
+    },
+    world_rules: bible.world.rules,
+    continuity_notes: 'Chỉ dùng nhân vật, địa điểm, vật phẩm đã thiết lập.'
+  };
 }
 
 function buildConcept(title: string): ConceptCandidate {

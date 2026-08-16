@@ -196,6 +196,9 @@ importers:
       '@ai-novel-engine/concept-engine':
         specifier: workspace:*
         version: link:../concept-engine
+      '@ai-novel-engine/llm-gateway':
+        specifier: workspace:*
+        version: link:../llm-gateway
       '@ai-novel-engine/longform-planner':
         specifier: workspace:*
         version: link:../longform-planner
