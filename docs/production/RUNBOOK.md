@@ -16,12 +16,15 @@ Many integration tests will skip if a database connection is not detected. To ru
    \`\`\`bash
    DATABASE_URL="postgres://postgres:postgres@127.0.0.1:54322/postgres"
    \`\`\`
-3. Run the tests: \`pnpm test\`
+3. Run the DB-backed tests: \`pnpm test:db\`
+4. Run the full suite: \`pnpm test\`
 
 ## Build & Release Commands
+- \`pnpm project:doctor\`: Reports required project artifacts, DB readiness, and gate commands.
 - \`pnpm lint\`: Checks code quality across packages.
 - \`pnpm typecheck\`: Runs strict TypeScript verification.
 - \`pnpm test\`: Executes unit and integration test suites.
+- \`pnpm test:db\`: Executes only Postgres-backed migration, RLS, and MVP insert checks.
 - \`pnpm build\`: Builds the packages and the Next.js frontend.
 
 ## Operational Recovery Procedures
