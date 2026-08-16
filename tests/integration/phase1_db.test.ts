@@ -1,19 +1,24 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { Client } from 'pg'
+import { describeDbError } from './db_error'
 
 describe('Phase 1 DB Tables and RLS (Real)', () => {
   let client: Client
   let dbConnected = false
 
   beforeAll(async () => {
-    const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres'
+    const connectionString = process.env.DATABASE_URL
+    if (!connectionString) {
+      console.warn('Skipping Phase 1 DB tests: DATABASE_URL is not set.')
+      return
+    }
     client = new Client({ connectionString })
     
     try {
       await client.connect()
       dbConnected = true
-    } catch (e) {
-      console.warn('Skipping Phase 1 DB tests: Could not connect to Postgres database.')
+    } catch (error) {
+      throw new Error(`Could not connect to Postgres database for Phase 1 DB tests: ${describeDbError(error)}`)
     }
   })
 

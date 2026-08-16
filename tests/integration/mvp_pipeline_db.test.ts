@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Client } from 'pg';
 import { buildMvpInsertPlan, generateMvpNovel, mapMvpNovelToPersistence } from '../../packages/mvp-pipeline/src';
+import { describeDbError } from './db_error';
 
 describe('MVP pipeline persistence (Real DB)', () => {
   let client: Client;
@@ -17,8 +18,8 @@ describe('MVP pipeline persistence (Real DB)', () => {
     try {
       await client.connect();
       dbConnected = true;
-    } catch {
-      console.warn('Skipping MVP DB insert test: Could not connect to Postgres database.');
+    } catch (error) {
+      throw new Error(`Could not connect to Postgres database for MVP DB insert test: ${describeDbError(error)}`);
     }
   });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { Client } from 'pg'
 import { randomUUID } from 'crypto'
+import { describeDbError } from './db_error'
 
 describe('RLS Policies Integration (Real)', () => {
   let client: Client
@@ -8,15 +9,19 @@ describe('RLS Policies Integration (Real)', () => {
 
   beforeAll(async () => {
     // In CI this connects to the isolated test database where the migration ran
-    const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres'
+    const connectionString = process.env.DATABASE_URL
+    if (!connectionString) {
+      console.warn('Skipping RLS tests: DATABASE_URL is not set.')
+      return
+    }
     client = new Client({ connectionString })
     
     // Test fails cleanly if we can't connect, verifying external DB integration is set up
     try {
       await client.connect()
       dbConnected = true
-    } catch (e) {
-      console.warn('Skipping RLS tests: Could not connect to Postgres database.')
+    } catch (error) {
+      throw new Error(`Could not connect to Postgres database for RLS tests: ${describeDbError(error)}`)
     }
   })
 

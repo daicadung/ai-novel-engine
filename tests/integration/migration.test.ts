@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { Client } from 'pg'
+import { describeDbError } from './db_error'
 
 describe('Migration & Schema Validation', () => {
   let client: Client
@@ -7,15 +8,19 @@ describe('Migration & Schema Validation', () => {
 
   beforeAll(async () => {
     // In CI this connects to the isolated test database where the migration ran
-    const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres'
+    const connectionString = process.env.DATABASE_URL
+    if (!connectionString) {
+      console.warn('Skipping migration tests: DATABASE_URL is not set.')
+      return
+    }
     client = new Client({ connectionString })
     
     // Test fails cleanly if we can't connect, verifying external DB integration is set up
     try {
       await client.connect()
       dbConnected = true
-    } catch (e) {
-      console.warn('Skipping migration tests: Could not connect to Postgres database.')
+    } catch (error) {
+      throw new Error(`Could not connect to Postgres database for migration tests: ${describeDbError(error)}`)
     }
   })
 
