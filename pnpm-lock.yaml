@@ -35,9 +35,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@ai-novel-engine/mvp-pipeline':
-        specifier: workspace:*
-        version: link:../../packages/mvp-pipeline
       '@supabase/ssr':
         specifier: ^0.12.4
         version: 0.12.4(@supabase/supabase-js@2.112.3)
@@ -54,9 +51,6 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
     devDependencies:
-      '@ai-novel-engine/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.3
