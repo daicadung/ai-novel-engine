@@ -35,6 +35,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@ai-novel-engine/mvp-pipeline':
+        specifier: workspace:*
+        version: link:../../packages/mvp-pipeline
       '@supabase/ssr':
         specifier: ^0.12.4
         version: 0.12.4(@supabase/supabase-js@2.112.3)
