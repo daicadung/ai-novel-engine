@@ -7,15 +7,21 @@ import {
 import { LlmGateway, OpenAiAdapter } from '@ai-novel-engine/llm-gateway';
 import { createClient } from '@/utils/supabase/server';
 
+// Extend Vercel Function max duration to 300s (requires Pro plan).
+// On Hobby plan the limit is 60s - for 1 chapter that should be enough.
+export const maxDuration = 300;
+
 function numberParam(value: FormDataEntryValue | null, fallback: number): number {
   const parsed = Number.parseInt(String(value ?? fallback), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 100) : fallback;
+  // Hard cap at 3 chapters to avoid serverless timeout - each chapter takes ~15-20s of LLM calls
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 3) : fallback;
 }
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const title = String(formData.get('title') ?? 'Ta La Kiem De').trim() || 'Ta La Kiem De';
-  const chapterCount = numberParam(formData.get('chapters'), 50);
+  // Default to 1 chapter so first generation completes quickly
+  const chapterCount = numberParam(formData.get('chapters'), 1);
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
