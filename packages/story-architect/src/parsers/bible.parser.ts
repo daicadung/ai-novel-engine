@@ -81,143 +81,117 @@ export function parseStoryBibleDraft(jsonText: string): StoryBibleDraft {
 
   const root = parsed;
 
-  const bibleObj = expectObject(root, 'bible', 'root');
+  // Use safe helpers so LLM output that deviates slightly doesn't crash the parser
+  const bibleObj = safeObject(root, 'bible');
   const bible = {
-    premise: expectString(bibleObj, 'premise', 'bible'),
-    genre: expectString(bibleObj, 'genre', 'bible'),
-    tone: expectString(bibleObj, 'tone', 'bible'),
-    style_guide: expectObject(bibleObj, 'style_guide', 'bible'),
-    rules: expectObject(bibleObj, 'rules', 'bible'),
+    premise: safeString(bibleObj, 'premise') || safeString(root, 'premise', 'No premise'),
+    genre: safeString(bibleObj, 'genre') || safeString(root, 'genre', 'fantasy'),
+    tone: safeString(bibleObj, 'tone', 'neutral'),
+    style_guide: safeObject(bibleObj, 'style_guide'),
+    rules: safeObject(bibleObj, 'rules'),
   };
 
-  const worldObj = expectObject(root, 'world', 'root');
+  const worldObj = safeObject(root, 'world');
   const world: WorldDraft = {
-    name: expectString(worldObj, 'name', 'world'),
-    description: expectString(worldObj, 'description', 'world'),
-    rules: expectObject(worldObj, 'rules', 'world'),
-    history: expectObject(worldObj, 'history', 'world'),
+    name: safeString(worldObj, 'name', 'Unknown World'),
+    description: safeString(worldObj, 'description', ''),
+    rules: safeObject(worldObj, 'rules'),
+    history: safeObject(worldObj, 'history'),
   };
 
-  const rawLocations = expectArray(root, 'locations', 'root');
-  const locations: LocationDraft[] = rawLocations.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at locations[${idx}]`);
-    return {
-      name: expectString(item, 'name', `locations[${idx}]`),
-      kind: expectString(item, 'kind', `locations[${idx}]`),
-      description: expectString(item, 'description', `locations[${idx}]`),
-      metadata: expectObject(item, 'metadata', `locations[${idx}]`),
-      parentName: expectOptionalString(item, 'parentName', `locations[${idx}]`),
-    };
-  });
+  const rawLocations = safeArray(root, 'locations');
+  const locations: LocationDraft[] = rawLocations.filter(isPlainObject).map((item, idx) => ({
+    name: safeString(item, 'name', `Location ${idx}`),
+    kind: safeString(item, 'kind', 'place'),
+    description: safeString(item, 'description', ''),
+    metadata: safeObject(item, 'metadata'),
+    parentName: typeof item.parentName === 'string' ? item.parentName : undefined,
+  }));
 
-  const rawFactions = expectArray(root, 'factions', 'root');
-  const factions: FactionDraft[] = rawFactions.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at factions[${idx}]`);
-    return {
-      name: expectString(item, 'name', `factions[${idx}]`),
-      kind: expectString(item, 'kind', `factions[${idx}]`),
-      description: expectString(item, 'description', `factions[${idx}]`),
-      goals: expectStringArray(item, 'goals', `factions[${idx}]`),
-      metadata: expectObject(item, 'metadata', `factions[${idx}]`),
-    };
-  });
+  const rawFactions = safeArray(root, 'factions');
+  const factions: FactionDraft[] = rawFactions.filter(isPlainObject).map((item, idx) => ({
+    name: safeString(item, 'name', `Faction ${idx}`),
+    kind: safeString(item, 'kind', 'group'),
+    description: safeString(item, 'description', ''),
+    goals: safeStringArray(item, 'goals'),
+    metadata: safeObject(item, 'metadata'),
+  }));
 
-  const rawCharacters = expectArray(root, 'characters', 'root');
-  const characters: CharacterDraft[] = rawCharacters.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at characters[${idx}]`);
-    
+  const rawCharacters = safeArray(root, 'characters');
+  const characters: CharacterDraft[] = rawCharacters.filter(isPlainObject).map((item, idx) => {
     let initial_state: CharacterDraft['initial_state'];
-    if (item.initial_state !== undefined && item.initial_state !== null) {
-      const stateObj = expectObject(item, 'initial_state', `characters[${idx}]`);
+    if (item.initial_state !== undefined && item.initial_state !== null && isPlainObject(item.initial_state)) {
+      const stateObj = item.initial_state as Record<string, unknown>;
       initial_state = {
-        status: expectString(stateObj, 'status', `characters[${idx}].initial_state`),
-        power_state: expectObject(stateObj, 'power_state', `characters[${idx}].initial_state`),
-        inventory: expectStringArray(stateObj, 'inventory', `characters[${idx}].initial_state`),
-        relationships: expectObject(stateObj, 'relationships', `characters[${idx}].initial_state`),
-        notes: expectString(stateObj, 'notes', `characters[${idx}].initial_state`),
-        current_location_name: expectOptionalString(stateObj, 'current_location_name', `characters[${idx}].initial_state`),
+        status: safeString(stateObj, 'status', 'alive'),
+        power_state: safeObject(stateObj, 'power_state'),
+        inventory: safeStringArray(stateObj, 'inventory'),
+        relationships: safeObject(stateObj, 'relationships'),
+        notes: safeString(stateObj, 'notes', ''),
+        current_location_name: typeof stateObj.current_location_name === 'string' ? stateObj.current_location_name : undefined,
       };
     }
-
     return {
-      name: expectString(item, 'name', `characters[${idx}]`),
-      role: expectString(item, 'role', `characters[${idx}]`),
-      description: expectString(item, 'description', `characters[${idx}]`),
-      personality: expectObject(item, 'personality', `characters[${idx}]`),
-      goals: expectStringArray(item, 'goals', `characters[${idx}]`),
-      secrets: expectStringArray(item, 'secrets', `characters[${idx}]`),
-      metadata: expectObject(item, 'metadata', `characters[${idx}]`),
+      name: safeString(item, 'name', `Character ${idx}`),
+      role: safeString(item, 'role', 'supporting'),
+      description: safeString(item, 'description', ''),
+      personality: safeObject(item, 'personality'),
+      goals: safeStringArray(item, 'goals'),
+      secrets: safeStringArray(item, 'secrets'),
+      metadata: safeObject(item, 'metadata'),
       initial_state,
     };
   });
 
-  const rawItems = expectArray(root, 'items', 'root');
-  const items: ItemDraft[] = rawItems.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at items[${idx}]`);
-    return {
-      name: expectString(item, 'name', `items[${idx}]`),
-      kind: expectString(item, 'kind', `items[${idx}]`),
-      description: expectString(item, 'description', `items[${idx}]`),
-      state: expectObject(item, 'state', `items[${idx}]`),
-      owner_character_name: expectOptionalString(item, 'owner_character_name', `items[${idx}]`),
-      location_name: expectOptionalString(item, 'location_name', `items[${idx}]`),
-    };
-  });
+  const rawItems = safeArray(root, 'items');
+  const items: ItemDraft[] = rawItems.filter(isPlainObject).map((item, idx) => ({
+    name: safeString(item, 'name', `Item ${idx}`),
+    kind: safeString(item, 'kind', 'object'),
+    description: safeString(item, 'description', ''),
+    state: safeObject(item, 'state'),
+    owner_character_name: typeof item.owner_character_name === 'string' ? item.owner_character_name : undefined,
+    location_name: typeof item.location_name === 'string' ? item.location_name : undefined,
+  }));
 
-  const rawAbilities = expectArray(root, 'abilities', 'root');
-  const abilities: AbilityDraft[] = rawAbilities.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at abilities[${idx}]`);
-    return {
-      name: expectString(item, 'name', `abilities[${idx}]`),
-      kind: expectString(item, 'kind', `abilities[${idx}]`),
-      description: expectString(item, 'description', `abilities[${idx}]`),
-      rules: expectStringArray(item, 'rules', `abilities[${idx}]`),
-      limitations: expectStringArray(item, 'limitations', `abilities[${idx}]`),
-      character_name: expectOptionalString(item, 'character_name', `abilities[${idx}]`),
-    };
-  });
+  const rawAbilities = safeArray(root, 'abilities');
+  const abilities: AbilityDraft[] = rawAbilities.filter(isPlainObject).map((item, idx) => ({
+    name: safeString(item, 'name', `Ability ${idx}`),
+    kind: safeString(item, 'kind', 'skill'),
+    description: safeString(item, 'description', ''),
+    rules: safeStringArray(item, 'rules'),
+    limitations: safeStringArray(item, 'limitations'),
+    character_name: typeof item.character_name === 'string' ? item.character_name : undefined,
+  }));
 
-  const timelineObj = expectObject(root, 'timeline', 'root');
-  const rawTimelineEvents = expectArray(timelineObj, 'events', 'timeline');
-  const timelineEvents: TimelineEventDraft[] = rawTimelineEvents.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at timeline.events[${idx}]`);
-    if (typeof item.sequence_number !== 'number') {
-      throw new Error(`Invalid StoryBible payload: Missing or invalid number at "timeline.events[${idx}].sequence_number"`);
-    }
-    return {
-      sequence_number: item.sequence_number,
-      title: expectString(item, 'title', `timeline.events[${idx}]`),
-      description: expectString(item, 'description', `timeline.events[${idx}]`),
-      event_type: expectString(item, 'event_type', `timeline.events[${idx}]`),
-      payload: expectObject(item, 'payload', `timeline.events[${idx}]`),
-    };
-  });
+  const timelineObj = safeObject(root, 'timeline');
+  const rawTimelineEvents = safeArray(timelineObj, 'events');
+  const timelineEvents: TimelineEventDraft[] = rawTimelineEvents.filter(isPlainObject).map((item, idx) => ({
+    sequence_number: typeof item.sequence_number === 'number' ? item.sequence_number : idx + 1,
+    title: safeString(item, 'title', `Event ${idx + 1}`),
+    description: safeString(item, 'description', ''),
+    event_type: safeString(item, 'event_type', 'event'),
+    payload: safeObject(item, 'payload'),
+  }));
 
   const timeline = {
-    name: expectString(timelineObj, 'name', 'timeline'),
-    description: expectString(timelineObj, 'description', 'timeline'),
+    name: safeString(timelineObj, 'name', 'Main Timeline'),
+    description: safeString(timelineObj, 'description', ''),
     events: timelineEvents,
   };
 
-  const rawPlotThreads = expectArray(root, 'plot_threads', 'root');
-  const plot_threads: PlotThreadDraft[] = rawPlotThreads.map((item, idx) => {
-    if (!isPlainObject(item)) throw new Error(`Invalid array item at plot_threads[${idx}]`);
-    
-    const status = expectString(item, 'status', `plot_threads[${idx}]`);
-    if (!['open', 'active', 'resolved', 'dropped'].includes(status)) {
-      throw new Error(`Invalid plot thread status "${status}" at plot_threads[${idx}].status`);
-    }
-
-    if (typeof item.priority !== 'number') {
-      throw new Error(`Invalid StoryBible payload: Missing or invalid number at "plot_threads[${idx}].priority"`);
-    }
-
+  const rawPlotThreads = safeArray(root, 'plot_threads');
+  const VALID_STATUSES: PlotThreadStatus[] = ['open', 'active', 'resolved', 'dropped'];
+  const plot_threads: PlotThreadDraft[] = rawPlotThreads.filter(isPlainObject).map((item, idx) => {
+    const rawStatus = safeString(item, 'status', 'open');
+    const status: PlotThreadStatus = VALID_STATUSES.includes(rawStatus as PlotThreadStatus)
+      ? (rawStatus as PlotThreadStatus)
+      : 'open';
     return {
-      title: expectString(item, 'title', `plot_threads[${idx}]`),
-      status: status as PlotThreadStatus,
-      priority: item.priority,
-      description: expectString(item, 'description', `plot_threads[${idx}]`),
-      metadata: expectObject(item, 'metadata', `plot_threads[${idx}]`),
+      title: safeString(item, 'title', `Plot Thread ${idx}`),
+      status,
+      priority: typeof item.priority === 'number' ? item.priority : idx + 1,
+      description: safeString(item, 'description', ''),
+      metadata: safeObject(item, 'metadata'),
     };
   });
 
