@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['@ai-novel-engine/config', '@ai-novel-engine/domain', '@ai-novel-engine/mvp-pipeline'],
   async headers() {
     return [
       {
