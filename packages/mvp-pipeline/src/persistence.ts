@@ -327,7 +327,7 @@ export function mapSingleChapterToPersistence(
   const timelineId = deterministicId(ids.novelId, 'timelines', result.bible.timeline.name);
 
   const outline = result.plan.chapter_outlines[chapterIndex];
-  const chapterRow = {
+  const chapterRow: Record<string, any> = {
     ...mapChapterDraftToPersistence(
       chapter.draft,
       ids.novelId,
@@ -338,7 +338,7 @@ export function mapSingleChapterToPersistence(
   };
 
   if (typeof chapterRow.metadata === 'object' && chapterRow.metadata !== null) {
-    (chapterRow.metadata as Record<string, unknown>).memory = chapter.memory;
+    chapterRow.metadata.memory = chapter.memory;
   } else {
     chapterRow.metadata = { memory: chapter.memory };
   }
