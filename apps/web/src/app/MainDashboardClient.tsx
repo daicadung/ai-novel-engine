@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { normalizeText } from '@/utils/text'
-import { deleteNovel } from './actions/novel'
+import { deleteNovel, setPendingAction } from './actions/novel'
 
 function viStatus(status: string): string {
   if (!status) return ''
@@ -31,6 +31,7 @@ export default function MainDashboardClient({
   const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>('Tất cả')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSettingAction, setIsSettingAction] = useState(false)
 
   // Categories
   const categories = useMemo(() => {
@@ -56,6 +57,23 @@ export default function MainDashboardClient({
         console.error(err)
         alert('Có lỗi xảy ra khi xóa truyện.')
         setIsDeleting(false)
+      }
+    }
+  }
+
+  const handlePendingAction = async (action: 'continue' | 'edit', targetChapter?: number) => {
+    if (!currentNovel) return
+    let confirmMsg = action === 'continue' ? 'Bạn có muốn đánh dấu truyện này để viết tiếp không?' : `Bạn có chắc muốn xoá dữ liệu từ chương ${targetChapter} và viết lại không?`
+    if (confirm(confirmMsg)) {
+      setIsSettingAction(true)
+      try {
+        await setPendingAction(currentNovel.id, action, targetChapter)
+        alert('Đã đánh dấu thành công! Hãy chạy CLI để tiếp tục.')
+      } catch (err) {
+        console.error(err)
+        alert('Có lỗi xảy ra.')
+      } finally {
+        setIsSettingAction(false)
       }
     }
   }
@@ -195,20 +213,38 @@ export default function MainDashboardClient({
           {currentNovel ? (
             <>
               {/* Action Bar */}
-              <div className="flex justify-end gap-3">
-                <button 
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 px-4 py-2 rounded-md text-sm font-medium transition-colors border border-red-200 dark:border-red-800/50"
-                >
-                  {isDeleting ? 'Đang xóa...' : '🗑️ Xóa truyện'}
-                </button>
-                <Link 
-                  href={`/protected/novel/${currentNovel.id}/read`}
-                  className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-6 py-2 rounded-md text-sm font-semibold transition-colors"
-                >
-                  📖 Đọc Truyện
-                </Link>
+              <div className="flex justify-between items-center bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm">
+                <div>
+                  {currentNovel.metadata?.pending_action && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                      Đang chờ CLI xử lý: {currentNovel.metadata.pending_action} {currentNovel.metadata.target_chapter ? `(Chương ${currentNovel.metadata.target_chapter})` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="flex justify-end gap-3">
+                  {chapters.length < currentNovel.target_chapter_count && !currentNovel.metadata?.pending_action && (
+                    <button 
+                      onClick={() => handlePendingAction('continue')}
+                      disabled={isSettingAction}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {isSettingAction ? 'Đang đánh dấu...' : '▶️ Tiếp tục viết'}
+                    </button>
+                  )}
+                  <button 
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 px-4 py-2 rounded-md text-sm font-medium transition-colors border border-red-200 dark:border-red-800/50"
+                  >
+                    {isDeleting ? 'Đang xóa...' : '🗑️ Xóa truyện'}
+                  </button>
+                  <Link 
+                    href={`/protected/novel/${currentNovel.id}/read`}
+                    className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-6 py-2 rounded-md text-sm font-semibold transition-colors"
+                  >
+                    📖 Đọc Truyện
+                  </Link>
+                </div>
               </div>
 
               {/* Top Row in Main */}
@@ -271,6 +307,7 @@ export default function MainDashboardClient({
                         <th className="px-4 py-2 font-medium">Ch.</th>
                         <th className="px-4 py-2 font-medium">Tiêu đề</th>
                         <th className="px-4 py-2 font-medium">Trạng thái</th>
+                        <th className="px-4 py-2 font-medium text-right">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -283,11 +320,20 @@ export default function MainDashboardClient({
                               hoàn tất
                             </span>
                           </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handlePendingAction('edit', ch.chapter_number)}
+                              disabled={isSettingAction || !!currentNovel.metadata?.pending_action}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 disabled:no-underline"
+                            >
+                              🔄 Viết lại từ đây
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {chapters.length === 0 && (
                         <tr>
-                          <td colSpan={3} className="px-4 py-8 text-center text-zinc-500">Chưa có chương nào</td>
+                          <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">Chưa có chương nào</td>
                         </tr>
                       )}
                     </tbody>

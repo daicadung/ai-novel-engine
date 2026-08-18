@@ -137,7 +137,16 @@ export function mapMvpNovelToPersistence(
       status: 'active',
       language: 'vi',
       target_chapter_count: result.plan.chapter_outlines.length,
-      metadata: { pipeline: 'mvp-pipeline' }
+      metadata: { 
+        pipeline: 'mvp-pipeline',
+        outline: {
+          title: result.title,
+          concept: result.concept,
+          dna: result.dna,
+          bible: result.bible,
+          plan: result.plan
+        }
+      }
     }],
     concept_candidates: [{
       id: conceptCandidateId,
@@ -327,6 +336,12 @@ export function mapSingleChapterToPersistence(
     ),
     id: deterministicId(ids.novelId, 'chapters', String(chapter.memory.chapter_number))
   };
+
+  if (typeof chapterRow.metadata === 'object' && chapterRow.metadata !== null) {
+    (chapterRow.metadata as Record<string, unknown>).memory = chapter.memory;
+  } else {
+    chapterRow.metadata = { memory: chapter.memory };
+  }
 
   const memoryCharacterStates = Object.entries(mapMemoryToCharacterStates(chapter.memory))
     .filter(([characterName]) => characterIds.has(characterName))

@@ -20,7 +20,7 @@ export default async function Dashboard(props: { searchParams: Promise<{ novel?:
   // Fetch novels list
   const { data: novelsRaw } = await supabase
     .from('novels')
-    .select('id, title, status, target_chapter_count, created_at, story_bibles(genre)')
+    .select('id, title, status, target_chapter_count, created_at, metadata, story_bibles(genre)')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -30,6 +30,7 @@ export default async function Dashboard(props: { searchParams: Promise<{ novel?:
     status: n.status,
     target_chapter_count: n.target_chapter_count,
     created_at: n.created_at,
+    metadata: typeof n.metadata === 'object' && n.metadata !== null ? n.metadata : {},
     genre: n.story_bibles && n.story_bibles.length > 0 ? n.story_bibles[0].genre : 'Chưa phân loại'
   }))
 

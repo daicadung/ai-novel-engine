@@ -1,28 +1,59 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
 export async function deleteNovel(novelId: string) {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
-
-  // The database should have ON DELETE CASCADE for foreign keys related to novel_id.
-  const { error } = await supabase
-    .from('novels')
-    .delete()
-    .eq('id', novelId)
-    .eq('owner_id', user.id)
-
+  // Xoá từ bảng novels là đủ nếu database có cấu hình ON DELETE CASCADE
+  // Hoặc ta xoá thủ công các bảng con nếu không có cascade
+  // Hiện tại MVP pipeline có nhiều bảng liên kết, tốt nhất là xoá từ novels
+  const { error } = await supabase.from('novels').delete().eq('id', novelId)
+  
   if (error) {
-    throw new Error(error.message)
+    console.error('Error deleting novel:', error)
+    throw new Error('Failed to delete novel')
   }
 
-  revalidatePath('/protected')
-  redirect('/protected')
+  // Reload lại trang chủ
+  revalidatePath('/')
+}
+
+export async function setPendingAction(novelId: string, action: 'continue' | 'edit', targetChapter?: number) {
+  const supabase = await createClient()
+  
+  const { data: novel, error: fetchError } = await supabase
+    .from('novels')
+    .select('metadata')
+    .eq('id', novelId)
+    .single()
+    
+  if (fetchError || !novel) {
+    console.error('Error fetching novel:', fetchError)
+    throw new Error('Novel not found')
+  }
+  
+  const metadata = typeof novel.metadata === 'object' && novel.metadata !== null 
+    ? novel.metadata as any 
+    : {}
+    
+  metadata.pending_action = action
+  if (action === 'edit' && targetChapter) {
+    metadata.target_chapter = targetChapter
+  } else {
+    delete metadata.target_chapter
+  }
+  
+  const { error: updateError } = await supabase
+    .from('novels')
+    .update({ metadata })
+    .eq('id', novelId)
+    
+  if (updateError) {
+    console.error('Error updating novel pending_action:', updateError)
+    throw new Error('Failed to set pending action')
+  }
+  
+  revalidatePath('/')
 }
