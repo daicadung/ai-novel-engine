@@ -35,8 +35,13 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
           <div>
             <p className="text-sm font-medium text-blue-700">Bộ tạo truyện MVP</p>
             <h1 className="text-2xl font-semibold tracking-tight">Từ tên truyện đến 50 chương có kiểm tra logic</h1>
-            <p className="mt-1 text-sm text-zinc-600">Bấm lưu để tạo nội dung bằng OpenAI và ghi vào Supabase.</p>
+            <p className="mt-1 text-sm text-zinc-600">Trang này hiển thị <strong>bản xem trước mô phỏng (Mock Data)</strong> cấu trúc truyện. Bấm <strong>Lưu vào Supabase</strong> để AI thực sự sáng tác nội dung mới.</p>
           </div>
+
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-md text-amber-800 text-sm mb-4">
+            <strong>Lưu ý:</strong> Nội dung hiển thị bên dưới chỉ là dữ liệu tĩnh để minh họa luồng hoạt động. Khi bạn bấm <strong>Lưu vào Supabase</strong>, AI mới bắt đầu quá trình tạo ra thế giới, nhân vật và nội dung chương mới hoàn toàn.
+          </div>
+
           <form className="flex flex-col gap-2 sm:flex-row" action="/mvp">
             <input
               aria-label="Tên truyện"
@@ -54,14 +59,14 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
               defaultValue={chapterCount}
             />
             <button className="h-10 bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700" type="submit">
-              Tạo lại
+              Cập nhật mô phỏng
             </button>
           </form>
           <form className="flex flex-col gap-2 sm:flex-row" action="/api/mvp/save" method="post">
             <input name="title" type="hidden" value={title} />
             <input name="chapters" type="hidden" value={chapterCount} />
             <button className="h-10 bg-green-700 px-4 text-sm font-medium text-white hover:bg-green-800" type="submit">
-              Lưu vào Supabase
+              🚀 Lưu & Sinh truyện bằng AI
             </button>
           </form>
           {error ? (
