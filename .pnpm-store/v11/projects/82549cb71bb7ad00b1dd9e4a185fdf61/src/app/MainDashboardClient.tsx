@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { normalizeText } from '@/utils/text'
-import { deleteNovel, setPendingAction } from './actions/novel'
+import { deleteNovel, setPendingAction, createNewNovel } from './actions/novel'
 
 function viStatus(status: string): string {
   if (!status) return ''
@@ -32,6 +32,11 @@ export default function MainDashboardClient({
   const [selectedCategory, setSelectedCategory] = useState<string>('Tất cả')
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSettingAction, setIsSettingAction] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const [newChapters, setNewChapters] = useState(10)
+  const [newLanguage, setNewLanguage] = useState('Vietnamese')
+  const [isCreating, setIsCreating] = useState(false)
 
   // Categories
   const categories = useMemo(() => {
@@ -78,6 +83,23 @@ export default function MainDashboardClient({
     }
   }
 
+  const handleCreateNew = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newTitle.trim()) return
+    setIsCreating(true)
+    try {
+      await createNewNovel(newTitle.trim(), newChapters, newLanguage)
+      setIsCreateModalOpen(false)
+      setNewTitle('')
+      setNewChapters(10)
+    } catch (err) {
+      console.error(err)
+      alert('Có lỗi xảy ra khi tạo truyện.')
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   // Mock data for costs & logic
   const mockCost = { totalTokens: 1250000, estimatedCostUsd: 14.50, model: 'claude-3-5-sonnet', provider: 'anthropic' }
   const mockLogic = [
@@ -100,11 +122,78 @@ export default function MainDashboardClient({
           </p>
         </div>
         <div className="flex gap-3">
-          <Link className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors" href="/mvp">
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+          >
             + Tạo truyện mới
-          </Link>
+          </button>
         </div>
       </header>
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl w-full max-w-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+              <h3 className="font-semibold text-lg">Tạo truyện mới</h3>
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleCreateNew} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Tên truyện</label>
+                <input 
+                  type="text" 
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  placeholder="Nhập tên truyện..."
+                  className="w-full px-3 py-2 border rounded-md dark:bg-zinc-800 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Số chương mục tiêu</label>
+                <input 
+                  type="number" 
+                  value={newChapters}
+                  onChange={e => setNewChapters(parseInt(e.target.value) || 1)}
+                  min={1}
+                  max={100}
+                  className="w-full px-3 py-2 border rounded-md dark:bg-zinc-800 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Ngôn ngữ</label>
+                <select 
+                  value={newLanguage}
+                  onChange={e => setNewLanguage(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md dark:bg-zinc-800 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Vietnamese">Tiếng Việt</option>
+                  <option value="English">Tiếng Anh</option>
+                </select>
+              </div>
+              <div className="pt-2 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md"
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isCreating || !newTitle.trim()}
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50"
+                >
+                  {isCreating ? 'Đang tạo...' : 'Lưu lại'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -150,11 +239,16 @@ export default function MainDashboardClient({
                   href={`/?novel=${novel.id}`} 
                   className={`block border rounded p-3 transition-colors ${currentNovel?.id === novel.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10' : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-300'}`}
                 >
-                  <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">{normalizeText(novel.title)}</div>
+                  <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
+                    {novel.metadata?.pending_action === 'new' && (
+                      <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
+                    )}
+                    {normalizeText(novel.title)}
+                  </div>
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">{novel.target_chapter_count} chương</span>
                     <span className="text-xs px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                      {viStatus(novel.status)}
+                      {novel.metadata?.pending_action ? 'Đang chờ xử lý' : viStatus(novel.status)}
                     </span>
                   </div>
                 </Link>

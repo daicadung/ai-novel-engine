@@ -57,3 +57,36 @@ export async function setPendingAction(novelId: string, action: 'continue' | 'ed
   
   revalidatePath('/')
 }
+
+export async function createNewNovel(title: string, chapters: number, language: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+  
+  const novelId = crypto.randomUUID()
+  
+  const { error } = await supabase.from('novels').insert({
+    id: novelId,
+    owner_id: user.id,
+    title: title,
+    slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    status: 'draft',
+    language: language,
+    target_chapter_count: chapters,
+    metadata: {
+      pipeline: 'mvp-pipeline',
+      pending_action: 'new'
+    }
+  })
+  
+  if (error) {
+    console.error('Error creating novel:', error)
+    throw new Error('Failed to create novel: ' + error.message)
+  }
+  
+  revalidatePath('/')
+  return novelId
+}
