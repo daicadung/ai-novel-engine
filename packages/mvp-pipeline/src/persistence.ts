@@ -288,9 +288,67 @@ function slugify(value: string): string {
     .replace(/^-|-$/g, '') || 'novel';
 }
 
-function deterministicId(seed: string, table: string, key: string): string {
+export function deterministicId(seed: string, table: string, key: string): string {
   const hex = createHash('sha256').update(`${seed}:${table}:${key}`).digest('hex').slice(0, 32);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+export function mapSingleChapterToPersistence(
+  result: MvpNovelResult,
+  chapterIndex: number,
+  ids: { novelId: string }
+): Partial<MvpPersistencePayloads> {
+  const chapter = result.chapters[chapterIndex];
+  if (!chapter) return {};
+
+  const locationIds = new Map(result.bible.locations.map(location => [
+    location.name,
+    deterministicId(ids.novelId, 'locations', location.name)
+  ]));
+  const characterIds = new Map(result.bible.characters.map(char => [
+    char.name,
+    deterministicId(ids.novelId, 'characters', char.name)
+  ]));
+  const outlineIds = new Map(result.plan.chapter_outlines.map(outline => [
+    outline.id,
+    deterministicId(ids.novelId, 'chapter_outlines', outline.id)
+  ]));
+  const timelineId = deterministicId(ids.novelId, 'timelines', result.bible.timeline.name);
+
+  const outline = result.plan.chapter_outlines[chapterIndex];
+  const chapterRow = {
+    ...mapChapterDraftToPersistence(
+      chapter.draft,
+      ids.novelId,
+      outline ? outlineIds.get(outline.id) ?? null : null,
+      chapter.memory.chapter_number
+    ),
+    id: deterministicId(ids.novelId, 'chapters', String(chapter.memory.chapter_number))
+  };
+
+  const memoryCharacterStates = Object.entries(mapMemoryToCharacterStates(chapter.memory)).map(([characterName, payload]) => ({
+    ...payload,
+    id: deterministicId(ids.novelId, 'character_states', `${characterName}:${payload.chapter_number}`),
+    character_id: characterIds.get(characterName) ?? deterministicId(ids.novelId, 'characters', characterName),
+    location_id: firstLocationId(locationIds),
+    notes: `[REF: character_name=${characterName}] ${payload.notes}`
+  }));
+
+  const memoryStoryEvents = mapMemoryToStoryEvents(chapter.memory).map((event, index) => ({
+    novel_id: ids.novelId,
+    ...event,
+    id: deterministicId(ids.novelId, 'story_events', `memory:${chapterIndex}:${index}`),
+    timeline_id: timelineId,
+    sequence_number: 10_000 + (chapterIndex * 100) + index
+  }));
+
+  return {
+    chapters: [chapterRow],
+    character_states: memoryCharacterStates,
+    story_events: memoryStoryEvents,
+    plot_thread_updates: [mapMemoryToPlotThreads(chapter.memory)],
+    item_updates: [mapMemoryToItems(chapter.memory)]
+  };
 }
 
 function firstLocationId(locationIds: Map<string, string>): string | null {

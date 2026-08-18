@@ -114,6 +114,24 @@ program
       console.log(`   - Thể loại: ${outline.concept.genre}`);
       console.log(`   - Nhân vật: ${outline.bible.characters.map((c: any) => c.name).join(', ')}`);
 
+      console.log('\n💾 Đang lưu Khung Truyện vào Supabase...');
+      const novelId = crypto.randomUUID();
+      const { mapMvpNovelToPersistence, mapSingleChapterToPersistence, MVP_INSERT_TABLE_ORDER } = await import('@ai-novel-engine/mvp-pipeline');
+      
+      const outlinePayloads = mapMvpNovelToPersistence({ ...outline, chapters: [] }, { ownerId: ownerId as string, novelId });
+      
+      for (const table of MVP_INSERT_TABLE_ORDER) {
+        const rows = outlinePayloads[table];
+        if (rows && rows.length > 0) {
+          const { error } = await supabase.from(table).insert(rows);
+          if (error) {
+            console.error(`❌ Lỗi khi lưu Khung Truyện vào bảng ${table}:`, error.message);
+            process.exit(1);
+          }
+        }
+      }
+      console.log('✅ Đã lưu Khung Truyện thành công!');
+
       console.log('\n✍️ [2/2] Đang viết nội dung chi tiết cho từng chương...');
       const chapterCount = parseInt(options.chapters, 10);
       
@@ -151,28 +169,25 @@ program
         summaries.push(draft.summary);
         applyMemory(snapshot, memory);
         
-        console.log(`      ✅ Xong Chương ${target_outline.chapter_number} (${draft.word_count} chữ).`);
+        console.log(`      ↳ Đang lưu Chương ${target_outline.chapter_number} lên Supabase...`);
+        const novelResult = { ...outline, chapters };
+        const chapterPayloads = mapSingleChapterToPersistence(novelResult, chapters.length - 1, { novelId });
+        
+        for (const table of MVP_INSERT_TABLE_ORDER) {
+          const rows = chapterPayloads[table as keyof typeof chapterPayloads];
+          if (rows && rows.length > 0) {
+            const { error } = await supabase.from(table).insert(rows);
+            if (error) {
+              console.error(`❌ Lỗi khi lưu bảng ${table} cho Chương ${target_outline.chapter_number}:`, error.message);
+              // Lỗi 1 phần không nên crash chương trình, log lại và chạy tiếp
+            }
+          }
+        }
+        
+        console.log(`      ✅ Xong Chương ${target_outline.chapter_number} (${draft.word_count} chữ). Đã sao lưu Cloud!`);
       }
       
-      const novelResult = { ...outline, chapters };
-
       console.log('✅ Đã viết xong tất cả các chương!');
-
-      console.log('\n💾 Đang lưu vào Supabase...');
-      const novelId = crypto.randomUUID();
-      const payloads = mapMvpNovelToPersistence(novelResult, { ownerId: ownerId as string, novelId });
-
-      for (const table of MVP_INSERT_TABLE_ORDER) {
-        const rows = payloads[table];
-        if (rows.length === 0) continue;
-
-        const { error } = await supabase.from(table).insert(rows);
-        if (error) {
-          console.error(`❌ Lỗi khi lưu vào bảng ${table}:`, error.message);
-          await supabase.from('novels').delete().eq('id', novelId);
-          process.exit(1);
-        }
-      }
 
       console.log(`🎉 HOÀN TẤT! Truyện đã được lưu vào database.`);
       console.log(`Mở trình duyệt vào Vercel (hoặc localhost) trang /protected?novel=${novelId} để xem.`);
