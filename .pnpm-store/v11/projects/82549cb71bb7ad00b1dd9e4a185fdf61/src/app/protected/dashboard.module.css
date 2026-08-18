@@ -79,6 +79,36 @@
   width: 100%;
 }
 
+.filterTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filterTab {
+  padding: 0.5rem 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.filterTab:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.filterTabActive {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -104,13 +134,24 @@
 
 .cardHeader {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
 .statusBadge {
   background: #eff6ff;
   color: #2563eb;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.genreBadge {
+  background: #f1f5f9;
+  color: #475569;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-size: 0.75rem;

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { normalizeText } from '@/utils/text'
 import styles from './reader.module.css'
+import { deleteNovel } from '../../actions/novel'
 
 interface Chapter {
   chapter_number: number
@@ -24,16 +25,37 @@ interface WorldRule {
   description: string
 }
 
+interface StoryBible {
+  premise?: string
+  genre?: string
+  tone?: string
+}
+
 interface DashboardProps {
   novel: { id: string; title: string; status: string; target_chapter_count: number; created_at: string }
   chapters: Chapter[]
   characters: Character[]
   worldRules: WorldRule[]
+  storyBible: StoryBible | null
   userEmail: string
 }
 
-export default function DetailDashboard({ novel, chapters, characters, worldRules, userEmail }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<'profile' | 'characters' | 'world' | 'pipeline'>('profile')
+export default function DetailDashboard({ novel, chapters, characters, worldRules, storyBible, userEmail }: DashboardProps) {
+  const [activeTab, setActiveTab] = useState<'profile' | 'chapters' | 'characters' | 'world' | 'pipeline'>('profile')
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (confirm('Bạn có chắc chắn muốn xóa bộ truyện này không? Toàn bộ dữ liệu sẽ bị mất vĩnh viễn.')) {
+      setIsDeleting(true)
+      try {
+        await deleteNovel(novel.id)
+      } catch (err) {
+        console.error(err)
+        alert('Có lỗi xảy ra khi xóa truyện.')
+        setIsDeleting(false)
+      }
+    }
+  }
 
   return (
     <div className={styles.container}>
@@ -50,9 +72,19 @@ export default function DetailDashboard({ novel, chapters, characters, worldRule
         <div style={{ textAlign: 'right' }}>
           <span className={styles.cardMeta} style={{ marginBottom: '1rem', display: 'inline-block' }}>{novel.status}</span>
           <br/>
-          <Link href={`/protected/novel/${novel.id}/read`} className={styles.navButton} style={{ background: '#2563eb', color: 'white', borderColor: '#2563eb' }}>
-            📖 Bắt Đầu Đọc Truyện
-          </Link>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button 
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={styles.navButton} 
+              style={{ background: '#fee2e2', color: '#ef4444', borderColor: '#f87171' }}
+            >
+              {isDeleting ? 'Đang Xóa...' : '🗑️ Xóa Truyện'}
+            </button>
+            <Link href={`/protected/novel/${novel.id}/read`} className={styles.navButton} style={{ background: '#2563eb', color: 'white', borderColor: '#2563eb' }}>
+              📖 Bắt Đầu Đọc Truyện
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -63,7 +95,13 @@ export default function DetailDashboard({ novel, chapters, characters, worldRule
               className={`${styles.tab} ${activeTab === 'profile' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('profile')}
             >
-              📖 Hồ Sơ & Mạch Truyện
+              📖 Hồ Sơ Truyện
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === 'chapters' ? styles.tabActive : ''}`}
+              onClick={() => setActiveTab('chapters')}
+            >
+              📑 Danh Sách Chương
             </button>
             <button
               className={`${styles.tab} ${activeTab === 'characters' ? styles.tabActive : ''}`}
@@ -86,6 +124,28 @@ export default function DetailDashboard({ novel, chapters, characters, worldRule
           </div>
 
           {activeTab === 'profile' && (
+            <div className={styles.reader}>
+              <h2 className={styles.readerTitle}>Thông Tin Tổng Quan</h2>
+              <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+                  <h3 style={{ color: '#0f172a', marginBottom: '0.5rem' }}>Thể Loại</h3>
+                  <p style={{ color: '#475569', fontSize: '1.125rem' }}>{normalizeText(storyBible?.genre || 'Chưa xác định')}</p>
+                </div>
+                
+                <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #e2e8f0' }}>
+                  <h3 style={{ color: '#0f172a', marginBottom: '0.5rem' }}>Văn Phong (Tone)</h3>
+                  <p style={{ color: '#475569', fontSize: '1.125rem' }}>{normalizeText(storyBible?.tone || 'Chưa xác định')}</p>
+                </div>
+
+                <div style={{ background: '#eff6ff', padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bfdbfe' }}>
+                  <h3 style={{ color: '#1e40af', marginBottom: '0.5rem' }}>Tóm Tắt Bối Cảnh (Premise)</h3>
+                  <p style={{ color: '#1e3a8a', fontSize: '1.125rem', lineHeight: 1.6 }}>{normalizeText(storyBible?.premise || 'Truyện chưa có cốt truyện bối cảnh cụ thể.')}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'chapters' && (
             <div className={styles.reader}>
               <h2 className={styles.readerTitle}>Danh Sách Chương</h2>
               <div style={{ marginTop: '2rem' }}>

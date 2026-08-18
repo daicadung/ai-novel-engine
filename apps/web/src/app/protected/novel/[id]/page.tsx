@@ -61,12 +61,21 @@ export default async function ReaderPage(props: {
     }))
   }
   
+  const { data: bibles } = await supabase
+    .from('story_bibles')
+    .select('premise, genre, tone')
+    .eq('novel_id', firstNovel.id)
+    .limit(1)
+  
+  const storyBible = bibles?.[0] || null
+
   return (
     <DetailDashboard 
       novel={firstNovel} 
       chapters={chapters || []} 
       characters={characters || []} 
       worldRules={worldRules} 
+      storyBible={storyBible}
       userEmail={user.email || 'Unknown'} 
     />
   )
