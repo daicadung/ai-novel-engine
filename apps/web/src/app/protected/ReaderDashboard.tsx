@@ -33,6 +33,7 @@ interface DashboardProps {
 export default function ReaderDashboard({ novel, chapters, characters, worldRules, userEmail }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'reader' | 'characters' | 'world'>('reader')
   const [activeChapterIndex, setActiveChapterIndex] = useState(0)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const activeChapter = chapters[activeChapterIndex]
 
@@ -46,13 +47,19 @@ export default function ReaderDashboard({ novel, chapters, characters, worldRule
           </p>
         </div>
         <div>
-          <span className={styles.cardMeta} style={{ marginBottom: 0 }}>{novel.status}</span>
+          <button 
+            className={styles.mobileMenuToggle}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? 'Đóng Menu' : '☰ Chọn Chương'}
+          </button>
+          <span className={styles.cardMeta} style={{ marginBottom: 0, display: 'inline-block', marginLeft: '1rem' }}>{novel.status}</span>
         </div>
       </header>
 
       <main className={styles.main}>
         {/* Sidebar */}
-        <aside className={styles.sidebar}>
+        <aside className={`${styles.sidebar} ${isMobileMenuOpen ? styles.mobileOpen : ''}`}>
           <div className={styles.sidebarSection}>
             <h2 className={styles.sidebarTitle}>Danh sách chương</h2>
             {chapters.length > 0 ? (
@@ -164,7 +171,7 @@ export default function ReaderDashboard({ novel, chapters, characters, worldRule
                   <div key={i} className={styles.worldRule}>
                     <span className={styles.cardMeta}>{rule.category}</span>
                     <h3 className={styles.worldTitle}>{rule.rule_name}</h3>
-                    <p className={styles.cardDesc} style={{ color: '#e2e8f0' }}>{rule.description}</p>
+                    <p className={styles.cardDesc}>{rule.description}</p>
                   </div>
                 ))
               ) : (
