@@ -79,7 +79,7 @@ program
       const { ChapterWriter } = await import('@ai-novel-engine/chapter-writer');
       
       const gateway = new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey as string, baseUrl: openAiBaseUrl }) });
-      const writerConfig = { provider: 'openai' as const, model: openAiModel, temperature: 0.8, maxTokens: 4000, timeoutMs: 300000 };
+      const writerConfig = { provider: 'openai' as const, model: openAiModel, temperature: 0.8, maxTokens: 16000, timeoutMs: 300000 };
       
       console.log('   ➤ Bước 1.1: Đang sáng tạo các Concept truyện (Ý tưởng lõi)...');
       const conceptEngine = new ConceptEngine(gateway, { ...writerConfig, provider: 'openai' });

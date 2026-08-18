@@ -109,13 +109,15 @@ export function mapMvpNovelToPersistence(
     };
   });
   const memoryCharacterStates = result.chapters.flatMap(chapter =>
-    Object.entries(mapMemoryToCharacterStates(chapter.memory)).map(([characterName, payload]) => ({
-      ...payload,
-      id: deterministicId(ids.novelId, 'character_states', `${characterName}:${payload.chapter_number}`),
-      character_id: characterIds.get(characterName) ?? deterministicId(ids.novelId, 'characters', characterName),
-      location_id: firstLocationId(locationIds),
-      notes: `[REF: character_name=${characterName}] ${payload.notes}`
-    }))
+    Object.entries(mapMemoryToCharacterStates(chapter.memory))
+      .filter(([characterName]) => characterIds.has(characterName))
+      .map(([characterName, payload]) => ({
+        ...payload,
+        id: deterministicId(ids.novelId, 'character_states', `${characterName}:${payload.chapter_number}`),
+        character_id: characterIds.get(characterName) as string,
+        location_id: firstLocationId(locationIds),
+        notes: `[REF: character_name=${characterName}] ${payload.notes}`
+      }))
   );
   const memoryStoryEvents = result.chapters.flatMap(chapter =>
     mapMemoryToStoryEvents(chapter.memory).map(event => ({
@@ -326,13 +328,15 @@ export function mapSingleChapterToPersistence(
     id: deterministicId(ids.novelId, 'chapters', String(chapter.memory.chapter_number))
   };
 
-  const memoryCharacterStates = Object.entries(mapMemoryToCharacterStates(chapter.memory)).map(([characterName, payload]) => ({
-    ...payload,
-    id: deterministicId(ids.novelId, 'character_states', `${characterName}:${payload.chapter_number}`),
-    character_id: characterIds.get(characterName) ?? deterministicId(ids.novelId, 'characters', characterName),
-    location_id: firstLocationId(locationIds),
-    notes: `[REF: character_name=${characterName}] ${payload.notes}`
-  }));
+  const memoryCharacterStates = Object.entries(mapMemoryToCharacterStates(chapter.memory))
+    .filter(([characterName]) => characterIds.has(characterName))
+    .map(([characterName, payload]) => ({
+      ...payload,
+      id: deterministicId(ids.novelId, 'character_states', `${characterName}:${payload.chapter_number}`),
+      character_id: characterIds.get(characterName) as string,
+      location_id: firstLocationId(locationIds),
+      notes: `[REF: character_name=${characterName}] ${payload.notes}`
+    }));
 
   const memoryStoryEvents = mapMemoryToStoryEvents(chapter.memory).map((event, index) => ({
     novel_id: ids.novelId,
