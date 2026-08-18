@@ -8,6 +8,7 @@ export interface StoryArchitectInput {
   language?: string;
   targetChapterCount?: number;
   styleNotes?: string;
+  onProgress?: (message: string) => void;
 }
 
 export interface StoryBibleDraft {

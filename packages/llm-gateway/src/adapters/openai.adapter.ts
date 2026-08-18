@@ -39,6 +39,7 @@ export class OpenAiAdapter implements LlmProviderAdapter {
           messages: request.messages,
           temperature: request.temperature,
           max_tokens: request.max_tokens,
+          stream: true,
         }),
         signal: controller.signal,
       });
@@ -60,28 +61,59 @@ export class OpenAiAdapter implements LlmProviderAdapter {
         );
       }
 
-      const data = await res.json();
-      
+      const reader = res.body?.getReader();
+      if (!reader) {
+        throw new LlmGatewayError('Response body is missing or not readable', 'openai', true);
+      }
+
+      const decoder = new TextDecoder('utf-8');
+      let fullContent = '';
+      let buffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex;
+          while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              const dataStr = line.slice(6).trim();
+              if (dataStr) {
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.choices?.[0]?.delta?.content) {
+                    fullContent += data.choices[0].delta.content;
+                  }
+                } catch (e) {
+                  // Ignore JSON parse errors for incomplete chunks
+                }
+              }
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') throw err;
+        throw new LlmGatewayError('Error reading stream: ' + err.message, 'openai', true);
+      }
+
+      if (!fullContent) {
+        throw new LlmGatewayError('Empty response from LLM via stream', 'openai', true);
+      }
+
       return {
-        request_id: data.id,
+        request_id: 'streamed',
         provider: 'openai',
         model: request.model,
         message: {
           role: 'assistant',
-          content: (function() {
-            const content = data.choices?.[0]?.message?.content || '';
-            if (!content) {
-              console.error('\n❌ [DEBUG] LLM Response Data has no content:', JSON.stringify(data, null, 2));
-              throw new LlmGatewayError('Empty response from LLM', 'openai', true);
-            }
-            return content;
-          })(),
+          content: fullContent,
         },
-        usage: data.usage ? {
-          input_tokens: data.usage.prompt_tokens,
-          output_tokens: data.usage.completion_tokens,
-          total_tokens: data.usage.total_tokens,
-        } : undefined,
       };
     } catch (error: any) {
       if (error instanceof LlmGatewayError) throw error;

@@ -97,6 +97,7 @@ program
         concept,
         dna,
         language: options.language,
+        onProgress: (msg) => console.log(`      ↳ ${msg}`),
       });
       const bible = bibleResult.draft;
       
