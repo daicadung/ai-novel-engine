@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { normalizeText } from '@/utils/text'
 import styles from './reader.module.css'
-import { deleteNovel } from '../../actions/novel'
+import { deleteNovel } from '../../../actions/novel'
 
 interface Chapter {
   chapter_number: number
