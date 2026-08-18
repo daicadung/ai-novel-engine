@@ -71,6 +71,7 @@ export default function ReaderDashboard({ novel, chapters, characters, worldRule
                     onClick={() => {
                       setActiveTab('reader')
                       setActiveChapterIndex(index)
+                      setIsMobileMenuOpen(false)
                     }}
                   >
                     <span className={styles.chapterName}>Chương {chapter.chapter_number}: {chapter.title}</span>
