@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { normalizeText } from '@/utils/text'
-import { deleteNovel } from '../actions/novel'
+import { deleteNovel } from './actions/novel'
 
 function viStatus(status: string): string {
   if (!status) return ''
