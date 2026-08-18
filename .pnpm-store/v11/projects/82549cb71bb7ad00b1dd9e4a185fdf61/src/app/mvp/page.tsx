@@ -37,7 +37,12 @@ export default function MvpPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), chapters: chapterCount }),
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(`Lỗi máy chủ (${res.status}): Quá trình xử lý bị gián đoạn (có thể do quá thời gian/timeout). Vui lòng thử lại.`);
+      }
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to generate outline');
@@ -64,7 +69,12 @@ export default function MvpPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outline, chapters: chapterCount }),
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(`Lỗi máy chủ (${res.status}): Quá trình lưu bị gián đoạn. Vui lòng thử lại.`);
+      }
 
       if (!res.ok) {
         if (res.status === 401) {
