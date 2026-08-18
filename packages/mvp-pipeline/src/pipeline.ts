@@ -16,12 +16,15 @@ export interface MvpChapterResult {
   continuity: ContinuityReport;
 }
 
-export interface MvpNovelResult {
+export interface MvpOutlineResult {
   title: string;
   concept: ConceptCandidate;
   dna: StoryDna;
   bible: StoryBibleDraft;
   plan: LongformPlan;
+}
+
+export interface MvpNovelResult extends MvpOutlineResult {
   chapters: MvpChapterResult[];
 }
 
@@ -63,12 +66,12 @@ export function generateMvpNovel(title: string, options: MvpPipelineOptions = {}
   return { title: cleanTitle, concept, dna, bible, plan, chapters };
 }
 
-export async function generateMvpNovelWithGateway(
+export async function generateMvpOutlineWithGateway(
   title: string,
   gateway: LlmGateway,
   writerConfig: WriterConfig,
   options: MvpPipelineOptions = {}
-): Promise<MvpNovelResult> {
+): Promise<MvpOutlineResult> {
   const cleanTitle = title.trim();
   if (!cleanTitle) {
     throw new Error('Title must not be empty.');
@@ -80,7 +83,7 @@ export async function generateMvpNovelWithGateway(
   }
 
   const language = options.language ?? 'Vietnamese';
-  const timeoutMs = writerConfig.timeoutMs ?? 85000; // 85s per LLM call to stay under Cloudflare 100s limit
+  const timeoutMs = writerConfig.timeoutMs ?? 85000;
   
   // 1. Concept Engine
   const conceptEngine = new ConceptEngine(gateway, {
@@ -116,6 +119,17 @@ export async function generateMvpNovelWithGateway(
     { targetChapters: chapterCount, targetArcs: Math.min(3, chapterCount), seed: cleanTitle }
   );
 
+  return { title: cleanTitle, concept, dna, bible, plan };
+}
+
+export async function generateChaptersForOutline(
+  outline: MvpOutlineResult,
+  gateway: LlmGateway,
+  writerConfig: WriterConfig,
+  options: MvpPipelineOptions = {}
+): Promise<MvpNovelResult> {
+  const language = options.language ?? 'Vietnamese';
+  
   // 4. Chapter Writer & Memory Extractor
   const writer = new ChapterWriter(gateway);
   const extractor = new MemoryExtractor(gateway);
@@ -123,12 +137,12 @@ export async function generateMvpNovelWithGateway(
   
   const chapters: MvpChapterResult[] = [];
   const summaries: string[] = [];
-  const snapshot = buildInitialSnapshot(bible);
+  const snapshot = buildInitialSnapshot(outline.bible);
 
-  for (const outline of plan.chapter_outlines) {
-    const context = buildWriterContext(outline, summaries, bible, plan, language);
+  for (const target_outline of outline.plan.chapter_outlines) {
+    const context = buildWriterContext(target_outline, summaries, outline.bible, outline.plan, language);
     const draft = await writer.write(context, writerConfig);
-    const memory = await extractor.extract(draft, outline.chapter_number, {
+    const memory = await extractor.extract(draft, target_outline.chapter_number, {
       provider: writerConfig.provider,
       model: writerConfig.model,
       temperature: 0.2,
@@ -140,7 +154,17 @@ export async function generateMvpNovelWithGateway(
     applyMemory(snapshot, memory);
   }
 
-  return { title: cleanTitle, concept, dna, bible, plan, chapters };
+  return { ...outline, chapters };
+}
+
+export async function generateMvpNovelWithGateway(
+  title: string,
+  gateway: LlmGateway,
+  writerConfig: WriterConfig,
+  options: MvpPipelineOptions = {}
+): Promise<MvpNovelResult> {
+  const outline = await generateMvpOutlineWithGateway(title, gateway, writerConfig, options);
+  return generateChaptersForOutline(outline, gateway, writerConfig, options);
 }
 
 function buildWriterContext(
