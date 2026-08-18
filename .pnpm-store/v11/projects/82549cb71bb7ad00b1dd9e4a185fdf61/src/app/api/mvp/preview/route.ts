@@ -3,7 +3,7 @@ import { generateMvpOutlineWithGateway } from '@ai-novel-engine/mvp-pipeline';
 import { LlmGateway, OpenAiAdapter } from '@ai-novel-engine/llm-gateway';
 import { createClient } from '@/utils/supabase/server';
 
-export const maxDuration = 120; // Allow 120s for outline generation
+export const maxDuration = 60; // Max allowed on Vercel Hobby
 
 export async function POST(request: NextRequest) {
   try {

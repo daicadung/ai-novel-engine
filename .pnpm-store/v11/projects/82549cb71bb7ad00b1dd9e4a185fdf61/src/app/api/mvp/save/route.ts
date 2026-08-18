@@ -8,7 +8,7 @@ import {
 import { LlmGateway, OpenAiAdapter } from '@ai-novel-engine/llm-gateway';
 import { createClient } from '@/utils/supabase/server';
 
-export const maxDuration = 300;
+export const maxDuration = 60; // Max allowed on Vercel Hobby
 
 export async function POST(request: NextRequest) {
   try {
