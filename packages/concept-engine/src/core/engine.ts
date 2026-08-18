@@ -14,38 +14,56 @@ export class ConceptEngine {
   public async generateConcepts(title: string): Promise<ConceptGenerationResult> {
     const messages = buildConceptGenerationPrompt(title);
 
-    const response = await this.gateway.generate(
-      {
-        provider: this.config.provider,
-        model: this.config.model,
-        messages,
-        temperature: this.config.temperature ?? 0.8,
-        max_tokens: this.config.maxTokens ?? 2000,
-        timeoutMs: this.config.timeoutMs,
-      },
-      { provider: this.config.provider, model: this.config.model }
-    );
+    let lastError;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const response = await this.gateway.generate(
+          {
+            provider: this.config.provider,
+            model: this.config.model,
+            messages,
+            temperature: this.config.temperature ?? 0.8,
+            max_tokens: this.config.maxTokens ?? 2000,
+            timeoutMs: this.config.timeoutMs,
+          },
+          { provider: this.config.provider, model: this.config.model }
+        );
 
-    const content = response.message.content;
-    return parseConceptCandidates(content);
+        const content = response.message.content;
+        return parseConceptCandidates(content);
+      } catch (e: any) {
+        lastError = e;
+        console.error(`\n❌ [DEBUG] Lỗi Concept (Lần ${i+1}/3): ${e.message}. Thử lại...`);
+      }
+    }
+    throw lastError;
   }
 
   public async extractStoryDna(concept: ConceptCandidate): Promise<StoryDna> {
     const messages = buildStoryDnaPrompt(concept);
 
-    const response = await this.gateway.generate(
-      {
-        provider: this.config.provider,
-        model: this.config.model,
-        messages,
-        temperature: 0.1,
-        max_tokens: this.config.maxTokens ?? 3000,
-        timeoutMs: this.config.timeoutMs,
-      },
-      { provider: this.config.provider, model: this.config.model }
-    );
+    let lastError;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const response = await this.gateway.generate(
+          {
+            provider: this.config.provider,
+            model: this.config.model,
+            messages,
+            temperature: 0.1,
+            max_tokens: this.config.maxTokens ?? 3000,
+            timeoutMs: this.config.timeoutMs,
+          },
+          { provider: this.config.provider, model: this.config.model }
+        );
 
-    const content = response.message.content;
-    return parseStoryDna(content);
+        const content = response.message.content;
+        return parseStoryDna(content);
+      } catch (e: any) {
+        lastError = e;
+        console.error(`\n❌ [DEBUG] Lỗi StoryDna (Lần ${i+1}/3): ${e.message}. Thử lại...`);
+      }
+    }
+    throw lastError;
   }
 }

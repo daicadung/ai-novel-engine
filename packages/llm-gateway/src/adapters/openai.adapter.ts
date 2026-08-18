@@ -55,7 +55,7 @@ export class OpenAiAdapter implements LlmProviderAdapter {
         throw new LlmGatewayError(
           `OpenAI API error ${res.status}: ${errorBody}`,
           'openai',
-          [429, 500, 502, 503, 504].includes(res.status),
+          [429, 500, 502, 503, 504, 524].includes(res.status),
           res.status
         );
       }
@@ -68,7 +68,14 @@ export class OpenAiAdapter implements LlmProviderAdapter {
         model: request.model,
         message: {
           role: 'assistant',
-          content: data.choices?.[0]?.message?.content || '',
+          content: (function() {
+            const content = data.choices?.[0]?.message?.content || '';
+            if (!content) {
+              console.error('\n❌ [DEBUG] LLM Response Data has no content:', JSON.stringify(data, null, 2));
+              throw new LlmGatewayError('Empty response from LLM', 'openai', true);
+            }
+            return content;
+          })(),
         },
         usage: data.usage ? {
           input_tokens: data.usage.prompt_tokens,

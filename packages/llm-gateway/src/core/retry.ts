@@ -1,6 +1,6 @@
 import { LlmGatewayError } from '../types';
 
-const RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504];
+const RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504, 524];
 
 export interface RetryConfig {
   maxRetries?: number;
