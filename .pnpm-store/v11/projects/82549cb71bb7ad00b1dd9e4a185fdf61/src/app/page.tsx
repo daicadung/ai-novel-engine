@@ -38,19 +38,8 @@ export default async function Dashboard() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Truyện hiện tại: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{novels.length > 0 ? novels[0].title : data.currentNovel.title}</span></p>
         </div>
         <div className="flex gap-3">
-          <select 
-            aria-label="Select Novel"
-            className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {novels.length > 0 ? (
-              novels.map((n: any) => <option key={n.id} value={n.id}>{n.title}</option>)
-            ) : (
-              <option>{data.currentNovel.title}</option>
-            )}
-            <option value="new">Tạo truyện mới...</option>
-          </select>
           <Link className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors" href="/mvp">
-            Tạo chương tiếp
+            + Tạo truyện mới
           </Link>
         </div>
       </header>
