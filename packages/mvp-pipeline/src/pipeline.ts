@@ -90,6 +90,7 @@ export async function generateMvpOutlineWithGateway(
     provider: writerConfig.provider,
     model: writerConfig.model,
     temperature: writerConfig.temperature,
+    maxTokens: writerConfig.maxTokens,
     timeoutMs,
   });
   const conceptResult = await conceptEngine.generateConcepts(cleanTitle);
@@ -102,6 +103,7 @@ export async function generateMvpOutlineWithGateway(
     provider: writerConfig.provider,
     model: writerConfig.model,
     temperature: writerConfig.temperature,
+    maxTokens: writerConfig.maxTokens,
     timeoutMs,
   });
   const bibleResult = await architect.generateStoryBible({
@@ -167,7 +169,7 @@ export async function generateMvpNovelWithGateway(
   return generateChaptersForOutline(outline, gateway, writerConfig, options);
 }
 
-function buildWriterContext(
+export function buildWriterContext(
   outline: LongformPlan['chapter_outlines'][number],
   summaries: string[],
   bible: StoryBibleDraft,
@@ -318,7 +320,7 @@ function extractDeterministicMemory(draft: ChapterDraft, chapterNumber: number, 
   };
 }
 
-function buildInitialSnapshot(bible: StoryBibleDraft): ContinuitySnapshot {
+export function buildInitialSnapshot(bible: StoryBibleDraft): ContinuitySnapshot {
   return {
     characters: bible.characters.map(character => ({
       name: character.name,
@@ -336,7 +338,7 @@ function buildInitialSnapshot(bible: StoryBibleDraft): ContinuitySnapshot {
   };
 }
 
-function applyMemory(snapshot: ContinuitySnapshot, memory: ExtractedMemory): void {
+export function applyMemory(snapshot: ContinuitySnapshot, memory: ExtractedMemory): void {
   for (const delta of memory.character_deltas) {
     const character = snapshot.characters.find(item => item.name === delta.character_name);
     if (character) {

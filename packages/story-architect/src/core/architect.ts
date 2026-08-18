@@ -18,6 +18,7 @@ export class StoryArchitect {
         model: this.config.model,
         temperature: this.config.temperature ?? 0.7,
         messages,
+        max_tokens: this.config.maxTokens ?? 4000,
         timeoutMs: this.config.timeoutMs,
         abortSignal,
       },

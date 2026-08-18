@@ -20,6 +20,7 @@ export class ConceptEngine {
         model: this.config.model,
         messages,
         temperature: this.config.temperature ?? 0.8,
+        max_tokens: this.config.maxTokens ?? 2000,
         timeoutMs: this.config.timeoutMs,
       },
       { provider: this.config.provider, model: this.config.model }
@@ -38,6 +39,7 @@ export class ConceptEngine {
         model: this.config.model,
         messages,
         temperature: 0.1,
+        max_tokens: this.config.maxTokens ?? 3000,
         timeoutMs: this.config.timeoutMs,
       },
       { provider: this.config.provider, model: this.config.model }

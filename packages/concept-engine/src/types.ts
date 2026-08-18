@@ -41,5 +41,6 @@ export interface ConceptEngineOptions {
   provider: import('@ai-novel-engine/llm-gateway').LlmProvider;
   model: string;
   temperature?: number;
+  maxTokens?: number;
   timeoutMs?: number;
 }

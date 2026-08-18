@@ -62,32 +62,98 @@ program
         ownerId = data.user.id;
         console.log('✅ Đăng nhập thành công.');
       } else if (!ownerId) {
-        console.error('❌ Lỗi: Phải cung cấp SUPABASE_EMAIL/SUPABASE_PASSWORD hoặc OWNER_ID trong file .env');
-        process.exit(1);
+        console.log('Đang tìm kiếm người dùng tự động qua Service Role Key...');
+        const { data: { users }, error } = await supabase.auth.admin.listUsers();
+        if (error || !users || users.length === 0) {
+          console.error('❌ Lỗi: Không tìm thấy người dùng nào trong Supabase. Vui lòng tạo tài khoản trên web trước hoặc cung cấp SUPABASE_EMAIL trong .env');
+          process.exit(1);
+        }
+        ownerId = users[0].id;
+        console.log(`✅ Đã tự động gán truyện cho người dùng: ${users[0].email} (${ownerId})`);
       }
 
       console.log('\n🧠 [1/2] Đang gọi OpenAI để thiết kế Khung Truyện (Ý tưởng, Nhân vật, Bản đồ)...');
-      console.log('Vui lòng đợi vài chục giây...');
-      const gateway = new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey, baseUrl: openAiBaseUrl }) });
+      const { ConceptEngine } = await import('@ai-novel-engine/concept-engine');
+      const { StoryArchitect } = await import('@ai-novel-engine/story-architect');
+      const { LongformPlanner } = await import('@ai-novel-engine/longform-planner');
+      const { ChapterWriter } = await import('@ai-novel-engine/chapter-writer');
       
-      const outline = await generateMvpOutlineWithGateway(
+      const gateway = new LlmGateway({ openai: new OpenAiAdapter({ apiKey: openAiKey as string, baseUrl: openAiBaseUrl }) });
+      const writerConfig = { provider: 'openai' as const, model: openAiModel, temperature: 0.8, maxTokens: 4000, timeoutMs: 300000 };
+      
+      console.log('   ➤ Bước 1.1: Đang sáng tạo các Concept truyện (Ý tưởng lõi)...');
+      const conceptEngine = new ConceptEngine(gateway, { ...writerConfig, provider: 'openai' });
+      const conceptResult = await conceptEngine.generateConcepts(title);
+      const concept = conceptResult.candidates[0];
+      if (!concept) throw new Error('Không thể tạo concept');
+      
+      console.log(`   ➤ Bước 1.2: Đang trích xuất Story DNA từ Concept "${concept.title}"...`);
+      const dna = await conceptEngine.extractStoryDna(concept);
+      
+      console.log('   ➤ Bước 1.3: Đang xây dựng Story Bible (Hồ sơ thế giới, Nhân vật, Hệ thống sức mạnh)...');
+      const architect = new StoryArchitect(gateway, { ...writerConfig, provider: 'openai' });
+      const bibleResult = await architect.generateStoryBible({
         title,
-        gateway,
-        { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1200, timeoutMs: 300000 },
-        { chapterCount: parseInt(options.chapters, 10), language: options.language }
+        concept,
+        dna,
+        language: options.language,
+      });
+      const bible = bibleResult.draft;
+      
+      console.log('   ➤ Bước 1.4: Đang lên Kế Hoạch Dài Hạn (Longform Planner) cho từng chương...');
+      const planner = new LongformPlanner();
+      const plan = planner.plan(
+        { title, bible },
+        { targetChapters: parseInt(options.chapters, 10), targetArcs: Math.min(3, parseInt(options.chapters, 10)), seed: title }
       );
+      
+      const outline = { title, concept, dna, bible, plan };
 
       console.log('✅ Đã tạo xong Khung Truyện!');
       console.log(`   - Thể loại: ${outline.concept.genre}`);
       console.log(`   - Nhân vật: ${outline.bible.characters.map((c: any) => c.name).join(', ')}`);
 
       console.log('\n✍️ [2/2] Đang viết nội dung chi tiết cho từng chương...');
-      const novelResult = await generateChaptersForOutline(
-        outline,
-        gateway,
-        { provider: 'openai', model: openAiModel, temperature: 0.8, maxTokens: 1200, timeoutMs: 300000 },
-        { chapterCount: parseInt(options.chapters, 10), language: options.language }
-      );
+      const chapterCount = parseInt(options.chapters, 10);
+      
+      // Inline generateChaptersForOutline with progress logs
+      const { MemoryExtractor, ContinuityChecker } = await import('@ai-novel-engine/memory-continuity');
+      
+      const writer = new ChapterWriter(gateway);
+      const extractor = new MemoryExtractor(gateway);
+      const checker = new ContinuityChecker();
+      
+      const chapters = [];
+      const summaries = [];
+      
+      const { buildInitialSnapshot, buildWriterContext, applyMemory } = await import('@ai-novel-engine/mvp-pipeline');
+      
+      const snapshot = buildInitialSnapshot(outline.bible);
+      for (const target_outline of outline.plan.chapter_outlines) {
+        console.log(`   ➤ Đang viết Chương ${target_outline.chapter_number}: ${target_outline.title}...`);
+        
+        const context = buildWriterContext(target_outline, summaries, outline.bible, outline.plan, options.language);
+        const draft = await writer.write(context, writerConfig);
+        
+        console.log(`      ↳ Đang trích xuất dữ liệu trí nhớ cho chương...`);
+        const memory = await extractor.extract(draft, target_outline.chapter_number, {
+          provider: writerConfig.provider,
+          model: writerConfig.model,
+          temperature: 0.2,
+          maxTokens: 800,
+        });
+        
+        console.log(`      ↳ Kiểm tra tính logic, liên tục của cốt truyện...`);
+        const continuity = checker.check(draft, memory, snapshot);
+        
+        chapters.push({ draft, memory, continuity });
+        summaries.push(draft.summary);
+        applyMemory(snapshot, memory);
+        
+        console.log(`      ✅ Xong Chương ${target_outline.chapter_number} (${draft.word_count} chữ).`);
+      }
+      
+      const novelResult = { ...outline, chapters };
 
       console.log('✅ Đã viết xong tất cả các chương!');
 

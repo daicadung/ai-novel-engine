@@ -38,12 +38,27 @@ importers:
 
   apps/cli:
     dependencies:
+      '@ai-novel-engine/chapter-writer':
+        specifier: workspace:*
+        version: link:../../packages/chapter-writer
+      '@ai-novel-engine/concept-engine':
+        specifier: workspace:*
+        version: link:../../packages/concept-engine
       '@ai-novel-engine/llm-gateway':
         specifier: workspace:*
         version: link:../../packages/llm-gateway
+      '@ai-novel-engine/longform-planner':
+        specifier: workspace:*
+        version: link:../../packages/longform-planner
+      '@ai-novel-engine/memory-continuity':
+        specifier: workspace:*
+        version: link:../../packages/memory-continuity
       '@ai-novel-engine/mvp-pipeline':
         specifier: workspace:*
         version: link:../../packages/mvp-pipeline
+      '@ai-novel-engine/story-architect':
+        specifier: workspace:*
+        version: link:../../packages/story-architect
       '@supabase/supabase-js':
         specifier: ^2.39.0
         version: 2.112.3
