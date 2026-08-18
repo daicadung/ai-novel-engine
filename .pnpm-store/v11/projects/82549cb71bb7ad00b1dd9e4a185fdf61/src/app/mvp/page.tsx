@@ -1,4 +1,6 @@
 import { generateMvpNovel, mapMvpNovelToPersistence, buildMvpInsertPlan } from '@ai-novel-engine/mvp-pipeline';
+import { createClient } from '@/utils/supabase/server';
+import Link from 'next/link';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -16,6 +18,9 @@ function numberParam(value: string | string[] | undefined, fallback: number): nu
 }
 
 export default async function MvpPage({ searchParams }: { searchParams: SearchParams }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   const params = await searchParams;
   const title = valueOfParam(params.title, 'Ta La Kiem De').trim() || 'Ta La Kiem De';
   const chapterCount = numberParam(params.chapters, 50);
@@ -65,9 +70,15 @@ export default async function MvpPage({ searchParams }: { searchParams: SearchPa
           <form className="flex flex-col gap-2 sm:flex-row" action="/api/mvp/save" method="post">
             <input name="title" type="hidden" value={title} />
             <input name="chapters" type="hidden" value={chapterCount} />
-            <button className="h-10 bg-green-700 px-4 text-sm font-medium text-white hover:bg-green-800" type="submit">
-              🚀 Lưu & Sinh truyện bằng AI
-            </button>
+            {user ? (
+              <button className="h-10 bg-green-700 px-4 text-sm font-medium text-white hover:bg-green-800" type="submit">
+                🚀 Lưu & Sinh truyện bằng AI
+              </button>
+            ) : (
+              <Link href="/login" className="flex items-center justify-center h-10 bg-zinc-800 px-4 text-sm font-medium text-white hover:bg-zinc-900">
+                Đăng nhập để Sinh truyện
+              </Link>
+            )}
           </form>
           {error ? (
             <p className="text-sm text-red-700">{error}</p>
