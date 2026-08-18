@@ -331,7 +331,14 @@ program
     
     while (true) {
       try {
-        const { data: novels, error } = await supabase.from('novels').select('*').eq('owner_id', ownerId).neq('status', 'completed');
+        // Sort by created_at to process oldest tasks first (FIFO queue)
+        const { data: novels, error } = await supabase
+          .from('novels')
+          .select('*')
+          .eq('owner_id', ownerId)
+          .neq('status', 'completed')
+          .order('created_at', { ascending: true });
+          
         if (error) {
           console.error('Lỗi khi fetch truyện:', error.message);
         } else if (novels) {
