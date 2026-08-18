@@ -20,7 +20,7 @@ export default async function Dashboard() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
-  let novels = [];
+  let novels: any[] = [];
   if (user) {
     const { data: userNovels } = await supabase
       .from('novels')
