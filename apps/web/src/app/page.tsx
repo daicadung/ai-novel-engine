@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { MOCK_DASHBOARD_DATA } from './dashboard-data';
+import { createClient } from '@/utils/supabase/server';
 
 function viStatus(status: string): string {
   return ({
@@ -14,8 +15,19 @@ function viStatus(status: string): string {
   } as Record<string, string>)[status] ?? status;
 }
 
-export default function Dashboard() {
+export default async function Dashboard() {
   const data = MOCK_DASHBOARD_DATA;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  let novels = [];
+  if (user) {
+    const { data: userNovels } = await supabase
+      .from('novels')
+      .select('id, title, status, target_chapter_count, created_at')
+      .order('created_at', { ascending: false });
+    if (userNovels) novels = userNovels;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans p-4 md:p-6 lg:p-8">
@@ -23,15 +35,19 @@ export default function Dashboard() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Máy tạo truyện AI</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Truyện hiện tại: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{data.currentNovel.title}</span></p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Truyện hiện tại: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{novels.length > 0 ? novels[0].title : data.currentNovel.title}</span></p>
         </div>
         <div className="flex gap-3">
           <select 
             aria-label="Select Novel"
             className="bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option>{data.currentNovel.title}</option>
-            <option>Tạo truyện mới...</option>
+            {novels.length > 0 ? (
+              novels.map((n: any) => <option key={n.id} value={n.id}>{n.title}</option>)
+            ) : (
+              <option>{data.currentNovel.title}</option>
+            )}
+            <option value="new">Tạo truyện mới...</option>
           </select>
           <Link className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors" href="/mvp">
             Tạo chương tiếp
@@ -44,6 +60,27 @@ export default function Dashboard() {
         
         {/* Cột trái - tiến trình và chi phí */}
         <div className="col-span-1 lg:col-span-3 flex flex-col gap-6">
+          {user && (
+            <section className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Danh sách truyện</h2>
+              <div className="space-y-2">
+                {novels.length > 0 ? novels.map((novel: any) => (
+                  <Link key={novel.id} href={`/protected?novel=${novel.id}`} className="block border border-zinc-100 dark:border-zinc-800 rounded p-3 hover:border-blue-500 transition-colors">
+                    <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">{novel.title}</div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">{novel.target_chapter_count} chương</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                        {viStatus(novel.status)}
+                      </span>
+                    </div>
+                  </Link>
+                )) : (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 italic">Chưa có truyện nào.</p>
+                )}
+              </div>
+            </section>
+          )}
+
           <section className="bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Luồng tạo truyện</h2>
             <div className="flex items-center justify-between mb-2">
