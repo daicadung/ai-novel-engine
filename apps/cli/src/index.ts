@@ -345,26 +345,48 @@ program
           // Ưu tiên 1: Edit
           const editNovel = novels.find(n => n.metadata && n.metadata.pending_action === 'edit');
           if (editNovel) {
-            await processEdit(editNovel);
+            try {
+              await processEdit(editNovel);
+            } catch (err: any) {
+              console.error(`❌ Lỗi khi xử lý edit truyện ${editNovel.id}:`, err.message);
+              editNovel.metadata.pending_action = null;
+              await supabase.from('novels').update({ metadata: editNovel.metadata }).eq('id', editNovel.id);
+            }
             continue;
           }
           
           // Ưu tiên 2: Continue
           const continueNovel = novels.find(n => n.metadata && n.metadata.pending_action === 'continue');
           if (continueNovel) {
-            await processContinue(continueNovel);
+            try {
+              await processContinue(continueNovel);
+            } catch (err: any) {
+              console.error(`❌ Lỗi khi xử lý continue truyện ${continueNovel.id}:`, err.message);
+              continueNovel.metadata.pending_action = null;
+              await supabase.from('novels').update({ metadata: continueNovel.metadata }).eq('id', continueNovel.id);
+            }
             continue;
           }
           
           // Ưu tiên 3: New
           const newNovel = novels.find(n => n.metadata && n.metadata.pending_action === 'new');
           if (newNovel) {
-            await processNew(newNovel.title, newNovel.target_chapter_count || 10, newNovel.language || 'Vietnamese', newNovel.id);
+            try {
+              await processNew(newNovel.title, newNovel.target_chapter_count || 10, newNovel.language || 'Vietnamese', newNovel.id);
+            } catch (err: any) {
+              console.error(`❌ Lỗi khi xử lý new truyện ${newNovel.id}:`, err.message);
+              // processNew might have already cleared pending_action, but we'll try to clear it just in case it failed early
+              const { data: nData } = await supabase.from('novels').select('metadata').eq('id', newNovel.id).single();
+              if (nData && nData.metadata) {
+                delete nData.metadata.pending_action;
+                await supabase.from('novels').update({ metadata: nData.metadata }).eq('id', newNovel.id);
+              }
+            }
             continue;
           }
         }
       } catch (err: any) {
-        console.error('❌ Lỗi trong lúc xử lý task:', err.message);
+        console.error('❌ Lỗi không xác định trong Daemon:', err.message);
       }
       
       // Sleep for 10 seconds before next check
